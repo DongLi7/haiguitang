@@ -395,6 +395,68 @@
     margin-top: 14px;
   }
 
+  /* ===== 题库选择器 ===== */
+  .bank-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .bank {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .soup-card {
+    position: relative;
+    flex: 1 0 168px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 12px 13px;
+    text-align: left;
+    white-space: normal;
+    color: var(--text);
+    background: var(--card-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+
+  .soup-card:hover { border-color: rgba(255, 255, 255, .22); }
+
+  .soup-card.active {
+    border-color: rgba(125, 211, 252, .65);
+    box-shadow: 0 0 0 1px rgba(125, 211, 252, .35), 0 8px 24px rgba(0, 0, 0, .25);
+  }
+
+  .soup-card-title { font-size: 15px; font-weight: 600; padding-right: 64px; }
+
+  .soup-card-diff { font-size: 12px; color: var(--warm); letter-spacing: .08em; }
+
+  .bank-tag {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 11px;
+    line-height: 1.7;
+    padding: 0 7px;
+    border-radius: 999px;
+    color: var(--text-dim);
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .03);
+  }
+
+  .bank-tag.playing  { color: var(--accent); border-color: rgba(125, 211, 252, .35); background: rgba(125, 211, 252, .08); }
+  .bank-tag.solved   { color: var(--ok);     border-color: rgba(74, 222, 128, .35);  background: rgba(74, 222, 128, .08); }
+  .bank-tag.revealed { color: var(--warm);   border-color: rgba(240, 201, 138, .3);  background: rgba(240, 201, 138, .08); }
+
   /* ===== 手机适配 ===== */
   @media (max-width: 480px) {
     .app { padding: 22px 12px 48px; }
@@ -570,6 +632,15 @@
     <p class="mode-status" id="modeStatus">⚪ 离线模式（点设置接入 AI）</p>
   </header>
 
+  <!-- 题库选择器 -->
+  <section class="card">
+    <div class="bank-head">
+      <span>题库</span>
+      <span class="bank-stat" id="bankStat">已解出 0 / 共 2 题</span>
+    </div>
+    <div class="bank" id="soupBank"></div>
+  </section>
+
   <!-- 汤面卡片 -->
   <section class="card">
     <div class="soup-head">
@@ -672,39 +743,85 @@
    1. 数据
    ========================================================= */
 
-/* 本局的完整数据：汤面、汤底、预设问答、判定关键词 */
-const SOUP = {
-  id: "soup-05",
-  title: "晚安",
-  difficulty: "★★★★",
-  surface: "她每天都会给同一个号码发一条「晚安」。三年，一天不落。对方从来没有回复过。三年后的某天，她收到了一条回复：「别再发了。」",
-  truth: "那个号码原本属于她已故的父亲。父亲去世后半年，号码因长期欠费停机，被运营商回收，一年后重新分配给了一个陌生人。她其实早就知道对面已经换人了，却不敢停下来，因为一旦停下，就等于承认父亲真的不在了。收到「别再发了」那天，她删掉了这个号码。",
-  qa: [
-    { keywords: ["恋人", "恋爱", "男友", "男朋友", "女友", "女朋友", "对象", "伴侣", "情侣", "暗恋", "表白"], answer: "否", note: "不是感情关系" },
-    { keywords: ["认识", "认得", "见过", "对方是谁", "身份", "熟人"], answer: "否", note: "她并不认识对方" },
-    { keywords: ["号码", "手机号", "电话", "原来的号码", "以前", "原来"], answer: "无法判断", note: "需要你自己推理" },
-    { keywords: ["还活着", "活着", "在世"], answer: "否", note: "原主人已不在" },
-    { keywords: ["亲人", "家人", "亲戚", "爸爸", "父亲", "爸", "母亲", "妈妈", "妈"], answer: "是", note: "是她的亲人" },
-    { keywords: ["换人", "换了", "换过", "回收", "停机", "重新分配", "卖给别人"], answer: "是", note: "号码确实换过主人" },
-    { keywords: ["为什么发", "为什么每天", "每天发", "一直发", "坚持发"], answer: "无法判断", note: "需要你自己推理" },
-    { keywords: ["知道", "清楚", "明白", "了解", "知情"], answer: "是", note: "她心里清楚" },
-    { keywords: ["为什么不停", "不停", "不放弃", "执念"], answer: "无法判断", note: "需要你自己推理" },
-    { keywords: ["烦", "骚扰", "打扰", "讨厌", "反感"], answer: "是", note: "对方确实觉得打扰" },
-    { keywords: ["坏人", "恶意", "故意", "报复"], answer: "否", note: "对方没有恶意" },
-    { keywords: ["删", "删除", "收到回复", "之后"], answer: "无法判断", note: "需要你自己推理" },
-    { keywords: ["等回复", "等待", "期待", "指望", "盼望"], answer: "否", note: "她没在等回复" },
-    { keywords: ["发了什么", "内容", "固定"], answer: "是", note: "内容固定，就是「晚安」" },
-    { keywords: ["鬼", "灵异", "超自然", "托梦"], answer: "否", note: "没有超自然设定" }
-  ],
-  /* AI 判定用的 5 个要点，core 表示是否核心要点 */
-  points: [
-    { core: true,  desc: "收信的这个号码原本属于她已故的父亲" },
-    { core: true,  desc: "父亲去世后号码因欠费停机，被运营商回收并重新分配给了陌生人" },
-    { core: true,  desc: "她始终不知道号码已经换了主人，一直以为还在发给父亲" },
-    { core: false, desc: "她三年收不到回复，是因为对面早已不是父亲" },
-    { core: false, desc: "「别再发了」是新的机主发的，他觉得被打扰" }
-  ],
-  truthKeywords: ["父亲", "去世", "号码", "回收", "别人", "陌生人", "不知道", "承认", "不敢"]
+/* 题库：每个汤的字段结构一致（id / title / difficulty / surface / truth / qa / points / truthKeywords） */
+const SOUPS = {
+  "soup-05": {
+    id: "soup-05",
+    title: "晚安",
+    difficulty: "★★★★",
+    surface: "她每天都会给同一个号码发一条「晚安」。三年，一天不落。对方从来没有回复过。三年后的某天，她收到了一条回复：「别再发了。」",
+    truth: "那个号码原本属于她已故的父亲。父亲去世后半年，号码因长期欠费停机，被运营商回收，一年后重新分配给了一个陌生人。她其实早就知道对面已经换人了，却不敢停下来，因为一旦停下，就等于承认父亲真的不在了。收到「别再发了」那天，她删掉了这个号码。",
+    qa: [
+      { keywords: ["恋人", "恋爱", "男友", "男朋友", "女友", "女朋友", "对象", "伴侣", "情侣", "暗恋", "表白"], answer: "否", note: "不是感情关系" },
+      { keywords: ["认识", "认得", "见过", "对方是谁", "身份", "熟人"], answer: "否", note: "她并不认识对方" },
+      { keywords: ["号码", "手机号", "电话", "原来的号码", "以前", "原来"], answer: "无法判断", note: "需要你自己推理" },
+      { keywords: ["还活着", "活着", "在世"], answer: "否", note: "原主人已不在" },
+      { keywords: ["亲人", "家人", "亲戚", "爸爸", "父亲", "爸", "母亲", "妈妈", "妈"], answer: "是", note: "是她的亲人" },
+      { keywords: ["换人", "换了", "换过", "回收", "停机", "重新分配", "卖给别人"], answer: "是", note: "号码确实换过主人" },
+      { keywords: ["为什么发", "为什么每天", "每天发", "一直发", "坚持发"], answer: "无法判断", note: "需要你自己推理" },
+      { keywords: ["知道", "清楚", "明白", "了解", "知情"], answer: "是", note: "她心里清楚" },
+      { keywords: ["为什么不停", "不停", "不放弃", "执念"], answer: "无法判断", note: "需要你自己推理" },
+      { keywords: ["烦", "骚扰", "打扰", "讨厌", "反感"], answer: "是", note: "对方确实觉得打扰" },
+      { keywords: ["坏人", "恶意", "故意", "报复"], answer: "否", note: "对方没有恶意" },
+      { keywords: ["删", "删除", "收到回复", "之后"], answer: "无法判断", note: "需要你自己推理" },
+      { keywords: ["等回复", "等待", "期待", "指望", "盼望"], answer: "否", note: "她没在等回复" },
+      { keywords: ["发了什么", "内容", "固定"], answer: "是", note: "内容固定，就是「晚安」" },
+      { keywords: ["鬼", "灵异", "超自然", "托梦"], answer: "否", note: "没有超自然设定" }
+    ],
+    /* AI 判定用的 5 个要点，core 表示是否核心要点 */
+    points: [
+      { core: true,  desc: "收信的这个号码原本属于她已故的父亲" },
+      { core: true,  desc: "父亲去世后号码因欠费停机，被运营商回收并重新分配给了陌生人" },
+      { core: true,  desc: "她其实早就知道号码换了主人，并不是不知情" },
+      { core: false, desc: "她一直发下去，是因为不敢承认父亲真的不在了" },
+      { core: false, desc: "「别再发了」是现在用这个号码的陌生人发的，他觉得被打扰" }
+    ],
+    truthKeywords: ["父亲", "去世", "号码", "回收", "别人", "陌生人", "不知道", "承认", "不敢"]
+  },
+
+  "soup-02": {
+    id: "soup-02",
+    title: "空座位",
+    difficulty: "★★☆",
+    surface: "他和她约好周末去看电影。到了影院，她发来一条消息：「我在最后一排靠窗的位置。」他站在放映厅门口，很久没有回她。",
+    truth: "她两周前查出重病住进了医院，一直瞒着他。周末这天，她不想失约，也不想让他担心，就骗他说自己已经在影院里了。可放映厅的最后一排背后是墙，根本没有窗——她随口编的位置露了馅。他站在门口，忽然明白她根本不在里面。他愣着没有回复，是因为不知道该不该拆穿她。",
+    qa: [
+      { keywords: ["恋人", "恋爱", "男女朋友", "男友", "女友", "对象", "情侣", "喜欢"], answer: "是", note: "两人是恋人" },
+      { keywords: ["死", "去世", "死了", "身亡", "事故", "意外"], answer: "否", note: "她还活着" },
+      { keywords: ["医院", "住院", "生病", "病了", "病房", "看病"], answer: "是", note: "她在医院" },
+      { keywords: ["骗", "撒谎", "假的", "编的", "没去", "没来"], answer: "是", note: "她确实没有去影院" },
+      { keywords: ["窗", "窗户", "靠窗"], answer: "是", note: "问题就出在这个「窗」上" },
+      { keywords: ["最后", "后排", "最后一排"], answer: "是", note: "关键就在这个位置" },
+      { keywords: ["为什么", "原因", "瞒", "没说", "告诉他"], answer: "无法判断", note: "需要你自己推理" },
+      { keywords: ["生气", "愤怒", "吵架", "分手", "怪"], answer: "否", note: "他没有生气" },
+      { keywords: ["电影", "片子", "放映", "场次"], answer: "是", note: "确实约了看电影" },
+      { keywords: ["担心", "怕", "不想让他", "难过"], answer: "是", note: "她不想让他担心" },
+      { keywords: ["重", "严重", "绝症", "晚期", "治不好"], answer: "是", note: "病得不轻" },
+      { keywords: ["鬼", "灵异", "超自然", "幻觉", "梦"], answer: "否", note: "没有超自然设定" }
+    ],
+    points: [
+      { core: true,  desc: "她其实在医院，并没有去影院" },
+      { core: true,  desc: "放映厅最后一排背后是墙、没有窗，所以那个位置是她编的" },
+      { core: true,  desc: "她病得很重，而且一直瞒着他" },
+      { core: false, desc: "她这么做是不想失约，也不想让他担心" },
+      { core: false, desc: "他猜到了真相，愣住没回复是因为不知该不该拆穿她" }
+    ],
+    truthKeywords: ["医院", "住院", "病", "窗", "墙", "没去", "编", "骗", "瞒", "担心"]
+  }
+};
+
+/* 当前正在玩的汤 */
+let currentSoupId = "soup-05";
+
+/* getSoup：返回当前汤的数据对象 */
+function getSoup() {
+  return SOUPS[currentSoupId];
+}
+
+/* 各汤的提问框示例文案 */
+const ASK_PLACEHOLDERS = {
+  "soup-05": "问一个可以用「是 / 否」回答的问题，例如：她是死者的亲人吗？",
+  "soup-02": "问一个可以用「是 / 否」回答的问题，例如：她在影院里吗？"
 };
 
 /* =========================================================
@@ -729,6 +846,8 @@ const confirmBtn  = document.getElementById("confirmBtn");  /* 弹窗提交按�
 const reviewBox   = document.getElementById("reviewBox");   /* 复盘的容器 */
 const reviewList  = document.getElementById("reviewList");  /* 复盘逐条列表 */
 const reviewTip   = document.getElementById("reviewTip");   /* 复盘离线说明 */
+const soupBank    = document.getElementById("soupBank");    /* 题库卡片容器 */
+const bankStat    = document.getElementById("bankStat");    /* 「已解出 x / 共 N 题」 */
 
 /* AI 主持模式相关元素 */
 const modeStatus      = document.getElementById("modeStatus");      /* 顶部模式状态 */
@@ -760,6 +879,7 @@ const DEFAULT_MODEL = "deepseek-flash";         /* 默认模型名 */
 const LS_BASE = "hs_api_base";                  /* localStorage 键：接口地址 */
 const LS_MODEL = "hs_api_model";                /* localStorage 键：模型名 */
 const LS_KEY = "hs_api_key";                    /* localStorage 键：API Key */
+const LS_PROGRESS = "hs_progress";              /* localStorage 键：题库进度存档 */
 const AI_ANSWER_WORDS = ["是", "否", "是也不是", "无关"]; /* AI 合法回答词 */
 
 let aiHistory = [];        /* 内存中的对话历史，只保留最近 8 轮 */
@@ -774,11 +894,14 @@ let judging = false;       /* AI 判定是否正在进行中，防止重复提�
    3. 初始化渲染
    ========================================================= */
 
-/* initSoup：把 SOUP 里的标题、难度、汤面渲染到页面上 */
+/* initSoup：把当前汤的标题、难度、汤面和提问框示例渲染到页面上 */
 function initSoup() {
-  document.getElementById("soupTitle").textContent = SOUP.title;
-  document.getElementById("soupDiff").textContent = "难度 " + SOUP.difficulty;
-  document.getElementById("soupSurface").textContent = SOUP.surface;
+  const soup = getSoup();
+
+  document.getElementById("soupTitle").textContent = soup.title;
+  document.getElementById("soupDiff").textContent = "难度 " + soup.difficulty;
+  document.getElementById("soupSurface").textContent = soup.surface;
+  askInput.placeholder = ASK_PLACEHOLDERS[currentSoupId] || "问一个可以用「是 / 否」回答的问题";
 }
 
 /* =========================================================
@@ -893,7 +1016,7 @@ function scoreKeyword(question, keyword) {
 }
 
 /**
- * matchQuestion：在 SOUP.qa 中找出与问题最匹配的一条预设问答。
+ * matchQuestion：在当前汤的 qa 中找出与问题最匹配的一条预设问答。
  * 规则：对每条问答累加其所有关键词的得分（见 scoreKeyword），
  *       取总分最高的一条（同分取靠前的条目）。
  * @param {string} question 玩家输入的问题
@@ -903,7 +1026,7 @@ function matchQuestion(question) {
   let best = null;      /* 当前得分最高的问答条目 */
   let bestScore = 0;    /* 当前最高总分 */
 
-  SOUP.qa.forEach(function (item) {
+  getSoup().qa.forEach(function (item) {
     let score = 0;
     item.keywords.forEach(function (kw) {
       score += scoreKeyword(question, kw);
@@ -938,6 +1061,7 @@ function matchQuestion(question) {
 async function submitAnswer(text) {
   /* 1. 保存玩家输入 */
   const userAnswer = text;
+  const soupId = currentSoupId;   /* 记住本次判定针对哪一题，防止判定期间切换汤 */
 
   resultCard.hidden = false;
 
@@ -958,6 +1082,9 @@ async function submitAnswer(text) {
       judging = false;
       confirmBtn.disabled = false;
     }
+
+    /* 等待期间玩家切了汤，这次判定作废 */
+    if (currentSoupId !== soupId) return;
   }
 
   if (judgement) {
@@ -974,6 +1101,7 @@ async function submitAnswer(text) {
       verdictEl.textContent = "解出真相！";
       verdictSub.textContent = "就是这个故事。你抓住了最关键的那几条线。";
       revealTruth();
+      writeProgress(soupId, "solved");   /* 存档：已解出 */
     } else if (total === 4) {
       /* 4 个但漏核心 → 棋差一招 */
       verdictEl.className = "verdict bad";
@@ -996,7 +1124,7 @@ async function submitAnswer(text) {
     let hits = 0;
     const keywordHits = [];
 
-    SOUP.truthKeywords.forEach(function (kw) {
+    getSoup().truthKeywords.forEach(function (kw) {
       const hit = userAnswer.includes(kw);
       keywordHits.push(hit);
       if (hit) hits++;
@@ -1010,6 +1138,7 @@ async function submitAnswer(text) {
       verdictEl.textContent = "解出真相！";
       verdictSub.textContent = "就是这个故事。你抓住了最关键的那几条线。";
       revealTruth();
+      writeProgress(soupId, "solved");   /* 存档：已解出 */
     } else {
       /* 未解出：只提示，不公布汤底 */
       verdictEl.className = "verdict bad";
@@ -1034,7 +1163,7 @@ async function submitAnswer(text) {
  * 解出答案与主动放弃都会走到这里。
  */
 function revealTruth() {
-  truthText.textContent = SOUP.truth;
+  truthText.textContent = getSoup().truth;
   truthBox.hidden = false;
 
   renderReview();              /* 汤底公开的同时渲染复盘 */
@@ -1069,6 +1198,9 @@ askForm.addEventListener("submit", async function (event) {
   questionCount++;
   syncAskControls();
 
+  /* 记住本次提问针对哪一题，等待 AI 期间切换汤则丢弃结果 */
+  const askSoupId = currentSoupId;
+
   /* 记录玩家的提问，并清空输入框 */
   appendMessage("user", question);
   askInput.value = "";
@@ -1086,9 +1218,11 @@ askForm.addEventListener("submit", async function (event) {
 
     try {
       const result = await askAI(question);
+      if (currentSoupId !== askSoupId) return;   /* 期间已切换汤，丢弃这次结果 */
       updateHostMessage(placeholder, result.answer, result.note);
       pushHistory(question, result.answer, result.note);
     } catch (err) {
+      if (currentSoupId !== askSoupId) return;   /* 期间已切换汤，丢弃这次结果 */
       /* 失败：占位气泡改成错误提示，并自动用离线匹配兜底，保证不卡住 */
       updateHostMessage(placeholder, "暂时联系不上（" + (err.message || String(err)) + "）", "");
       const offline = matchQuestion(question);
@@ -1106,6 +1240,10 @@ askForm.addEventListener("submit", async function (event) {
     pushHistory(question, result.answer, result.note);
     trackFailStreak(result.answer);
   }
+
+  /* 第一次提问成功：把当前汤标记为「进行中」（已有进度则不覆盖） */
+  const rec = getProgressFor(currentSoupId);
+  if (!rec || !rec.status) writeProgress(currentSoupId, "playing");
 
   /* 重新获得焦点，方便连续提问 */
   askInput.focus();
@@ -1166,6 +1304,11 @@ giveUpBtn.addEventListener("click", function () {
   verdictSub.textContent = "没关系，先看看真相，再回去对照你的推理。";
 
   revealTruth();
+
+  /* 存档：已看过汤底；已经解出的不覆盖 */
+  const rec = getProgressFor(currentSoupId);
+  if (!rec || rec.status !== "solved") writeProgress(currentSoupId, "revealed");
+
   resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
 });
 
@@ -1216,10 +1359,10 @@ function buildSystemPrompt() {
   return `你是一款中文海龟汤推理游戏的主持人。玩家通过向你提问来推理出汤底。
 
 【汤面】
-${SOUP.surface}
+${getSoup().surface}
 
 【汤底（只有你知道，绝对不可透露）】
-${SOUP.truth}
+${getSoup().truth}
 
 【回答规则】
 1. 你的回答第一行必须是下面四个词之一，不能带任何其他字符：
@@ -1391,14 +1534,14 @@ function buildJudgePrompt() {
 你要判断玩家的复述命中了下面 5 个要点中的哪几个。
 
 【汤底（标准答案）】
-${SOUP.truth}
+${getSoup().truth}
 
 【5 个要点】
-1. ${SOUP.points[0].desc}
-2. ${SOUP.points[1].desc}
-3. ${SOUP.points[2].desc}
-4. ${SOUP.points[3].desc}
-5. ${SOUP.points[4].desc}
+1. ${getSoup().points[0].desc}
+2. ${getSoup().points[1].desc}
+3. ${getSoup().points[2].desc}
+4. ${getSoup().points[3].desc}
+5. ${getSoup().points[4].desc}
 
 【判定标准】
 - 只有玩家明确表达出该要点的意思才算命中；含糊暗示、只沾边、只出现了关键词但语义相反，一律不算。
@@ -1488,7 +1631,7 @@ function renderReview() {
   reviewList.hidden = false;
   reviewList.textContent = "";
 
-  SOUP.points.forEach(function (point, i) {
+  getSoup().points.forEach(function (point, i) {
     const hit = lastJudgement.hits[i] === true;
     const reason = (lastJudgement.reasons[i] || "").trim();
 
@@ -1633,11 +1776,163 @@ function syncAskControls() {
 }
 
 /* =========================================================
-   12. 启动
+   12. 题库选择器与进度存档
+   ========================================================= */
+
+/* readProgress：读取题库进度；读取失败 / JSON 损坏 / 存储不可用一律当作没有存档 */
+function readProgress() {
+  try {
+    const raw = localStorage.getItem(LS_PROGRESS);
+    if (!raw) return {};
+
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== "object" || Array.isArray(data)) return {};
+
+    return data;
+  } catch (e) {
+    return {};
+  }
+}
+
+/* getProgressFor：读取单个汤的进度记录，没有则返回 null */
+function getProgressFor(id) {
+  const rec = readProgress()[id];
+  return (rec && typeof rec === "object") ? rec : null;
+}
+
+/**
+ * writeProgress：写入某题的进度并立即刷新题库。
+ * @param {string} id 汤的 id
+ * @param {"playing"|"solved"|"revealed"} status 进度状态
+ */
+function writeProgress(id, status) {
+  if (!SOUPS[id]) return;
+
+  const all = readProgress();
+  all[id] = { status: status, asked: questionCount, updatedAt: Date.now() };
+
+  try {
+    localStorage.setItem(LS_PROGRESS, JSON.stringify(all));
+  } catch (e) { /* 存储不可用时静默忽略 */ }
+
+  renderBank();
+}
+
+/* statusLabel：把进度状态转成卡片上的状态标签文案 */
+function statusLabel(status) {
+  if (status === "playing") return "进行中";
+  if (status === "solved") return "已解出";
+  if (status === "revealed") return "已看过汤底";
+  return "未挑战";
+}
+
+/* statusClass：状态标签的样式类名 */
+function statusClass(status) {
+  return (status === "playing" || status === "solved" || status === "revealed") ? status : "none";
+}
+
+/* renderBank：渲染题库卡片，并刷新「已解出 x / 共 N 题」统计 */
+function renderBank() {
+  const progress = readProgress();
+  const ids = Object.keys(SOUPS);
+  let solved = 0;
+
+  soupBank.textContent = "";
+
+  ids.forEach(function (id) {
+    const soup = SOUPS[id];
+    const rec = progress[id];
+    const status = (rec && typeof rec === "object") ? rec.status : "";
+
+    if (status === "solved") solved++;
+
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "soup-card" + (id === currentSoupId ? " active" : "");
+    card.dataset.id = id;
+
+    const tag = document.createElement("span");
+    tag.className = "bank-tag " + statusClass(status);
+    tag.textContent = statusLabel(status);
+
+    const title = document.createElement("span");
+    title.className = "soup-card-title";
+    title.textContent = soup.title;
+
+    const diff = document.createElement("span");
+    diff.className = "soup-card-diff";
+    diff.textContent = soup.difficulty;
+
+    card.appendChild(tag);
+    card.appendChild(title);
+    card.appendChild(diff);
+    soupBank.appendChild(card);
+  });
+
+  bankStat.textContent = "已解出 " + solved + " / 共 " + ids.length + " 题";
+}
+
+/**
+ * switchSoup：切换到另一道汤，并重置所有单局状态（不恢复上次的对话记录）。
+ * @param {string} id 目标汤的 id
+ */
+function switchSoup(id) {
+  if (!SOUPS[id] || id === currentSoupId) return;
+
+  currentSoupId = id;
+
+  /* 清空对话记录 */
+  chatEl.textContent = "";
+
+  /* 重置计数与运行时状态 */
+  questionCount = 0;
+  aiHistory = [];
+  failStreak = 0;
+  guideShown = false;
+  lastJudgement = null;
+  judging = false;
+  aiPending = false;
+
+  /* 输入区恢复可用 */
+  askInput.disabled = false;
+  askInput.value = "";
+  askSubmitBtn.disabled = false;
+  askHint.textContent = "";
+  askHint.classList.remove("show");
+  clearTimeout(askHintTimer);
+
+  /* 结果区 / 汤底 / 复盘全部隐藏 */
+  resultCard.hidden = true;
+  verdictEl.textContent = "";
+  verdictEl.className = "verdict";
+  verdictSub.textContent = "";
+  truthBox.hidden = true;
+  reviewBox.hidden = true;
+  reviewList.textContent = "";
+  reviewTip.hidden = true;
+
+  giveUpBtn.disabled = false;
+  confirmBtn.disabled = false;
+
+  /* 按新汤重新渲染标题、汤面、难度、提问框示例 */
+  initSoup();
+  syncAskControls();
+  renderBank();
+}
+
+/* 点击题库卡片切换汤 */
+soupBank.addEventListener("click", function (event) {
+  const card = event.target.closest(".soup-card");
+  if (card && card.dataset.id) switchSoup(card.dataset.id);
+});
+
+/* =========================================================
+   13. 启动
    ========================================================= */
 initSoup();
 updateModeStatus();
 syncAskControls();
+renderBank();
 askInput.focus();
 </script>
 </body>

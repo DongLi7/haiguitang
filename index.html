@@ -181,6 +181,17 @@
     border-bottom-left-radius: 4px;
   }
 
+  /* 系统提示：连续匹配失败时出现，横贯整个对话区 */
+  .msg.system { align-self: stretch; max-width: 100%; }
+
+  .msg.system .bubble {
+    display: block;
+    background: rgba(240, 201, 138, .07);
+    border: 1px dashed rgba(240, 201, 138, .3);
+    color: #cbd7e6;
+    font-size: 13.5px;
+  }
+
   /* 命中问答条目时的小字备注 */
   .note {
     margin-top: 4px;
@@ -478,21 +489,21 @@ const SOUP = {
   surface: "她每天都会给同一个号码发一条「晚安」。三年，一天不落。对方从来没有回复过。三年后的某天，她收到了一条回复：「别再发了。」",
   truth: "那个号码原本属于她已故的父亲。父亲去世后半年，号码因长期欠费停机，被运营商回收，一年后重新分配给了一个陌生人。她其实早就知道对面已经换人了，却不敢停下来，因为一旦停下，就等于承认父亲真的不在了。收到「别再发了」那天，她删掉了这个号码。",
   qa: [
-    { keywords: ["恋人", "男朋友", "女朋友", "对象"], answer: "否", note: "不是感情关系" },
-    { keywords: ["认识", "认识对方", "是谁"], answer: "否", note: "她并不认识对方" },
-    { keywords: ["号码", "手机号", "谁用", "原来的"], answer: "无法判断", note: "需要你自己推理" },
-    { keywords: ["还活着", "活着", "活着吗"], answer: "否", note: "原主人已不在" },
-    { keywords: ["亲人", "家人", "爸爸", "父亲", "妈"], answer: "是", note: "是她的亲人" },
-    { keywords: ["换人", "换了", "回收", "停机", "重新分配"], answer: "是", note: "号码确实换过主人" },
-    { keywords: ["为什么", "为什么每天", "每天发"], answer: "无法判断", note: "需要你自己推理" },
-    { keywords: ["知道", "清楚", "明白"], answer: "是", note: "她心里清楚" },
-    { keywords: ["为什么不停", "不停", "坚持"], answer: "无法判断", note: "需要你自己推理" },
-    { keywords: ["烦", "骚扰", "生气"], answer: "是", note: "对方确实觉得打扰" },
-    { keywords: ["坏人", "恶意", "故意"], answer: "否", note: "对方没有恶意" },
-    { keywords: ["收到回复", "之后", "删"], answer: "无法判断", note: "需要你自己推理" },
-    { keywords: ["等回复", "回应", "期待"], answer: "否", note: "她没在等回复" },
-    { keywords: ["发的是", "内容", "固定"], answer: "是", note: "内容固定，就是「晚安」" },
-    { keywords: ["鬼", "超自然", "灵异"], answer: "否", note: "没有超自然设定" }
+    { keywords: ["恋人", "恋爱", "男友", "男朋友", "女友", "女朋友", "对象", "伴侣", "情侣", "暗恋", "表白"], answer: "否", note: "不是感情关系" },
+    { keywords: ["认识", "认得", "见过", "对方是谁", "身份", "熟人"], answer: "否", note: "她并不认识对方" },
+    { keywords: ["号码", "手机号", "电话", "原来的号码", "以前", "原来"], answer: "无法判断", note: "需要你自己推理" },
+    { keywords: ["还活着", "活着", "在世"], answer: "否", note: "原主人已不在" },
+    { keywords: ["亲人", "家人", "亲戚", "爸爸", "父亲", "爸", "母亲", "妈妈", "妈"], answer: "是", note: "是她的亲人" },
+    { keywords: ["换人", "换了", "换过", "回收", "停机", "重新分配", "卖给别人"], answer: "是", note: "号码确实换过主人" },
+    { keywords: ["为什么发", "为什么每天", "每天发", "一直发", "坚持发"], answer: "无法判断", note: "需要你自己推理" },
+    { keywords: ["知道", "清楚", "明白", "了解", "知情"], answer: "是", note: "她心里清楚" },
+    { keywords: ["为什么不停", "不停", "不放弃", "执念"], answer: "无法判断", note: "需要你自己推理" },
+    { keywords: ["烦", "骚扰", "打扰", "讨厌", "反感"], answer: "是", note: "对方确实觉得打扰" },
+    { keywords: ["坏人", "恶意", "故意", "报复"], answer: "否", note: "对方没有恶意" },
+    { keywords: ["删", "删除", "收到回复", "之后"], answer: "无法判断", note: "需要你自己推理" },
+    { keywords: ["等回复", "等待", "期待", "指望", "盼望"], answer: "否", note: "她没在等回复" },
+    { keywords: ["发了什么", "内容", "固定"], answer: "是", note: "内容固定，就是「晚安」" },
+    { keywords: ["鬼", "灵异", "超自然", "托梦"], answer: "否", note: "没有超自然设定" }
   ],
   truthKeywords: ["父亲", "去世", "号码", "回收", "别人", "陌生人", "不知道", "承认", "不敢"]
 };
@@ -521,6 +532,10 @@ const confirmBtn  = document.getElementById("confirmBtn");  /* 弹窗提交按�
 let askHintTimer = null;
 let answerHintTimer = null;
 
+/* 连续返回「拿不准」的次数，以及引导提示是否已经出现过 */
+let failStreak = 0;
+let guideShown = false;
+
 /* =========================================================
    3. 初始化渲染
    ========================================================= */
@@ -538,7 +553,7 @@ function initSoup() {
 
 /**
  * appendMessage：往对话记录区追加一条消息，并自动滚动到最新一条。
- * @param {"user"|"host"} role 谁说的话
+ * @param {"user"|"host"|"system"} role 谁说的话（system 为系统提示，不带前缀）
  * @param {string} text 消息内容
  * @param {string} [note] 灰色小字备注，仅主持人回答时可能出现
  */
@@ -549,7 +564,8 @@ function appendMessage(role, text, note) {
   const bubble = document.createElement("div");
   bubble.className = "bubble";
   /* 用 textContent 写入，避免用户输入被当成 HTML 解析 */
-  bubble.textContent = (role === "user" ? "你：" : "主持人：") + text;
+  const prefix = role === "user" ? "你：" : role === "host" ? "主持人：" : "";
+  bubble.textContent = prefix + text;
 
   msg.appendChild(bubble);
 
@@ -590,36 +606,86 @@ function showHint(el, text, opts) {
    ========================================================= */
 
 /**
+ * isSubsequence：判断 small 是否按顺序出现在 big 中（允许跳过中间的字）。
+ * 例如 isSubsequence("男友", "男朋友") === true，
+ *      isSubsequence("朋友", "男朋友") === true，
+ *      isSubsequence("友男", "男朋友") === false（顺序反了）。
+ * @param {string} small 较短的片段
+ * @param {string} big 被判断的关键词
+ * @returns {boolean} small 是否为 big 的子序列
+ */
+function isSubsequence(small, big) {
+  let i = 0;                                  /* small 中已经匹配到的位置 */
+
+  for (let j = 0; j < big.length && i < small.length; j++) {
+    if (big[j] === small[i]) i++;             /* 按顺序找到下一个相同的字就前进 */
+  }
+
+  return i === small.length;                  /* 所有字都按顺序匹配上了 */
+}
+
+/**
+ * scoreKeyword：给「问题」与「单个关键词」的匹配程度打分。
+ * 第一层精确匹配：问题包含该关键词 → 2 分；
+ * 第二层近似省略匹配：问题中存在连续片段 s，且
+ *     - s 长度 >= 2
+ *     - s 是关键词的子序列
+ *     - s 长度 >= 关键词长度 * 0.6（向上取整）
+ *   → 1 分；
+ * 都不满足 → 0 分。
+ * @param {string} question 玩家输入的问题
+ * @param {string} keyword 关键词
+ * @returns {number} 0 / 1 / 2
+ */
+function scoreKeyword(question, keyword) {
+  /* 第一层：精确匹配 */
+  if (question.includes(keyword)) return 2;
+
+  /* 第二层：近似省略匹配（枚举问题文本中所有可能的连续片段） */
+  const minLen = Math.ceil(keyword.length * 0.6);            /* 片段的最短长度要求 */
+  const maxLen = Math.min(question.length, keyword.length);   /* 比关键词更长不可能成为其子序列 */
+
+  for (let len = maxLen; len >= Math.max(2, minLen); len--) {
+    for (let start = 0; start + len <= question.length; start++) {
+      const s = question.slice(start, start + len);
+      if (isSubsequence(s, keyword)) return 1;                /* 命中一次即可得 1 分 */
+    }
+  }
+
+  return 0;
+}
+
+/**
  * matchQuestion：在 SOUP.qa 中找出与问题最匹配的一条预设问答。
- * 规则：逐条统计 keywords 里有多少个出现在问题中（includes 判断），
- *       取命中数最多且至少命中 1 个的那一条。
+ * 规则：对每条问答累加其所有关键词的得分（见 scoreKeyword），
+ *       取总分最高的一条（同分取靠前的条目）。
  * @param {string} question 玩家输入的问题
  * @returns {{answer: string, note: string}} 主持人的回答与备注
  */
 function matchQuestion(question) {
-  let best = null;      /* 当前最匹配的问答条目 */
-  let bestHits = 0;     /* 当前最高命中数 */
+  let best = null;      /* 当前得分最高的问答条目 */
+  let bestScore = 0;    /* 当前最高总分 */
 
   SOUP.qa.forEach(function (item) {
-    let hits = 0;
+    let score = 0;
     item.keywords.forEach(function (kw) {
-      if (question.includes(kw)) hits++;
+      score += scoreKeyword(question, kw);
     });
 
-    /* 命中数严格大于才替换，保证命中数相同时取靠前的条目 */
-    if (hits > bestHits) {
-      bestHits = hits;
+    /* 总分严格大于才替换，保证同分时取靠前的条目 */
+    if (score > bestScore) {
+      bestScore = score;
       best = item;
     }
   });
 
-  /* 找到了至少命中 1 个关键词的条目 */
-  if (best && bestHits >= 1) {
+  /* 有任一关键词命中 */
+  if (best && bestScore > 0) {
     return { answer: best.answer, note: best.note || "" };
   }
 
-  /* 一个都没命中 */
-  return { answer: "无法判断", note: "这个问题我判断不了，换个问法试试" };
+  /* 一个关键词都没命中 */
+  return { answer: "拿不准", note: "我拿不准，你能换个更具体的说法试试吗？" };
 }
 
 /* =========================================================
@@ -696,6 +762,20 @@ askForm.addEventListener("submit", function (event) {
   /* 主持人回答 */
   const result = matchQuestion(question);
   appendMessage("host", result.answer, result.note);
+
+  /* 统计连续「拿不准」的次数；连续 2 次时插入一次引导提示（只出现一次） */
+  if (result.answer === "拿不准") {
+    failStreak++;
+    if (failStreak >= 2 && !guideShown) {
+      guideShown = true;
+      appendMessage(
+        "system",
+        "要不要换个角度问问？\n· 她认识对方吗？\n· 这个号码以前属于谁？\n· 号码有没有换过主人？"
+      );
+    }
+  } else {
+    failStreak = 0;   /* 有一次匹配成功就重新计数 */
+  }
 
   /* 清空输入框并重新获得焦点，方便连续提问 */
   askInput.value = "";

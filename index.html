@@ -504,6 +504,51 @@
   /* 等待 AI 回答时的占位气泡 */
   .msg.pending .bubble { color: var(--text-dim); }
 
+  /* ===== 复盘：你的推理 vs 真相 ===== */
+  .review { margin-top: 16px; }
+
+  .review[hidden] { display: none; }
+
+  .review-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 13.5px;
+  }
+
+  .review-list[hidden] { display: none; }
+
+  .review-list li {
+    display: flex;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--line);
+    color: #c3d0e0;
+    word-break: break-word;
+  }
+
+  .review-list li:last-child { border-bottom: none; }
+
+  .review-mark { flex: none; font-weight: 600; }
+
+  .review-mark.ok { color: var(--ok); }
+  .review-mark.no { color: #6b7a8d; }
+
+  .review-desc { flex: 1; }
+
+  /* 覆盖 .truth p 的正文框样式，让说明保持一行小字 */
+  .truth .review-tip {
+    margin: 8px 0 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+
+  .truth .review-tip[hidden] { display: none; }
+
 </style>
 </head>
 <body>
@@ -562,6 +607,13 @@
     <div class="truth" id="truthBox" hidden>
       <h3>汤底</h3>
       <p id="truthText"></p>
+
+      <!-- 复盘：AI 判定逐条对照；离线判定只给一行说明 -->
+      <div class="review" id="reviewBox" hidden>
+        <h3>你的推理 vs 真相</h3>
+        <ul class="review-list" id="reviewList" hidden></ul>
+        <p class="review-tip" id="reviewTip" hidden>本次为离线关键词判定，仅供参考</p>
+      </div>
     </div>
   </section>
 
@@ -644,6 +696,14 @@ const SOUP = {
     { keywords: ["发了什么", "内容", "固定"], answer: "是", note: "内容固定，就是「晚安」" },
     { keywords: ["鬼", "灵异", "超自然", "托梦"], answer: "否", note: "没有超自然设定" }
   ],
+  /* AI 判定用的 5 个要点，core 表示是否核心要点 */
+  points: [
+    { core: true,  desc: "收信的这个号码原本属于她已故的父亲" },
+    { core: true,  desc: "父亲去世后号码因欠费停机，被运营商回收并重新分配给了陌生人" },
+    { core: true,  desc: "她始终不知道号码已经换了主人，一直以为还在发给父亲" },
+    { core: false, desc: "她三年收不到回复，是因为对面早已不是父亲" },
+    { core: false, desc: "「别再发了」是新的机主发的，他觉得被打扰" }
+  ],
   truthKeywords: ["父亲", "去世", "号码", "回收", "别人", "陌生人", "不知道", "承认", "不敢"]
 };
 
@@ -666,6 +726,9 @@ const answerInput = document.getElementById("answerInput"); /* 弹窗里的输�
 const answerHint  = document.getElementById("answerHint");  /* 弹窗里的提示文字 */
 const cancelBtn   = document.getElementById("cancelBtn");   /* 弹窗取消按钮 */
 const confirmBtn  = document.getElementById("confirmBtn");  /* 弹窗提交按钮 */
+const reviewBox   = document.getElementById("reviewBox");   /* 复盘的容器 */
+const reviewList  = document.getElementById("reviewList");  /* 复盘逐条列表 */
+const reviewTip   = document.getElementById("reviewTip");   /* 复盘离线说明 */
 
 /* AI 主持模式相关元素 */
 const modeStatus      = document.getElementById("modeStatus");      /* 顶部模式状态 */
@@ -702,6 +765,10 @@ const AI_ANSWER_WORDS = ["是", "否", "是也不是", "无关"]; /* AI 合法�
 let aiHistory = [];        /* 内存中的对话历史，只保留最近 8 轮 */
 let questionCount = 0;     /* 本局已提问次数 */
 let aiPending = false;     /* 是否有一个 AI 请求正在进行中 */
+
+/* 最近一次汤底判定的详情：{ mode: "ai"|"keyword", hits: [...], reasons: [...] } */
+let lastJudgement = null;
+let judging = false;       /* AI 判定是否正在进行中，防止重复提交 */
 
 /* =========================================================
    3. 初始化渲染
@@ -864,31 +931,95 @@ function matchQuestion(question) {
 
 /**
  * submitAnswer：判定玩家写下的「汤底」是否正确。
- * 规则：统计 SOUP.truthKeywords 中有多少个出现在玩家文字里，
- *       命中数 >= 4 判定为解出，否则判定为未解出。
+ * 已配置 Key 时先交给 AI 逐条判定（judgeByAI）；
+ * AI 不可用或返回 null 时，回落到原有的关键词判定。
  * @param {string} text 玩家写下的推理
  */
-function submitAnswer(text) {
-  let hits = 0;
-
-  SOUP.truthKeywords.forEach(function (kw) {
-    if (text.includes(kw)) hits++;
-  });
+async function submitAnswer(text) {
+  /* 1. 保存玩家输入 */
+  const userAnswer = text;
 
   resultCard.hidden = false;
 
-  if (hits >= 4) {
-    /* 解出：显示汤底 */
-    verdictEl.className = "verdict ok";
-    verdictEl.textContent = "解出真相！";
-    verdictSub.textContent = "就是这个故事。你抓住了最关键的那几条线。";
-    revealTruth();
-  } else {
-    /* 未解出：只提示，不公布汤底 */
-    verdictEl.className = "verdict bad";
-    verdictEl.textContent = "还不对，再想想。";
-    verdictSub.textContent = "再回到汤面里看看：号码、父亲、以及她为什么不肯停下来。";
+  const { key } = getAIConfig();
+  let judgement = null;
+
+  if (key) {
+    /* 2. AI 判定：先显示核对中的状态，期间禁用提交按钮 */
+    judging = true;
+    confirmBtn.disabled = true;
+    verdictEl.className = "verdict";
+    verdictEl.textContent = "裁判正在核对…";
+    verdictSub.textContent = "AI 正在逐条比对你的复述。";
+
+    try {
+      judgement = await judgeByAI(userAnswer);
+    } finally {
+      judging = false;
+      confirmBtn.disabled = false;
+    }
   }
+
+  if (judgement) {
+    /* ---------- AI 判定成功 ---------- */
+    const hits = judgement.hits;
+    const total = hits.filter(Boolean).length;
+    const coreHit = hits.slice(0, 3).filter(Boolean).length;
+
+    lastJudgement = { mode: "ai", hits: hits, reasons: judgement.reasons };
+
+    if (total === 5 || (total === 4 && coreHit === 3)) {
+      /* 5 个全中，或 4 个且核心全中 → 解出 */
+      verdictEl.className = "verdict ok";
+      verdictEl.textContent = "解出真相！";
+      verdictSub.textContent = "就是这个故事。你抓住了最关键的那几条线。";
+      revealTruth();
+    } else if (total === 4) {
+      /* 4 个但漏核心 → 棋差一招 */
+      verdictEl.className = "verdict bad";
+      verdictEl.textContent = "棋差一招。";
+      verdictSub.textContent = "已经很接近了，但你漏掉了一个核心要点，再想想。";
+    } else if (total >= 2) {
+      /* 2~3 个 → 初见端倪 */
+      verdictEl.className = "verdict bad";
+      verdictEl.textContent = "初见端倪。";
+      verdictSub.textContent = "方向有了，但最关键的部分还没说清，继续往下挖。";
+    } else {
+      /* 0~1 个 → 相差甚远 */
+      verdictEl.className = "verdict bad";
+      verdictEl.textContent = "相差甚远。";
+      verdictSub.textContent = "再回到汤面里看看：号码、父亲、以及她为什么不肯停下来。";
+    }
+  } else {
+    /* ---------- 回落到关键词判定（原逻辑保持不变） ---------- */
+    console.warn("[判定] AI 判定不可用，已回落到关键词判定");
+    let hits = 0;
+    const keywordHits = [];
+
+    SOUP.truthKeywords.forEach(function (kw) {
+      const hit = userAnswer.includes(kw);
+      keywordHits.push(hit);
+      if (hit) hits++;
+    });
+
+    lastJudgement = { mode: "keyword", hits: keywordHits, reasons: [] };
+
+    if (hits >= 4) {
+      /* 解出：显示汤底 */
+      verdictEl.className = "verdict ok";
+      verdictEl.textContent = "解出真相！";
+      verdictSub.textContent = "就是这个故事。你抓住了最关键的那几条线。";
+      revealTruth();
+    } else {
+      /* 未解出：只提示，不公布汤底 */
+      verdictEl.className = "verdict bad";
+      verdictEl.textContent = "还不对，再想想。";
+      verdictSub.textContent = "再回到汤面里看看：号码、父亲、以及她为什么不肯停下来。";
+    }
+  }
+
+  /* 汤底已经公开时，同步刷新复盘 */
+  if (!truthBox.hidden) renderReview();
 
   /* 把结果区滚动到视野内，方便玩家看到判定 */
   resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -905,6 +1036,8 @@ function submitAnswer(text) {
 function revealTruth() {
   truthText.textContent = SOUP.truth;
   truthBox.hidden = false;
+
+  renderReview();              /* 汤底公开的同时渲染复盘 */
 
   giveUpBtn.disabled = true;   /* 已经看到汤底，按钮不再可用 */
 }
@@ -1000,8 +1133,10 @@ overlay.addEventListener("click", function (event) {
   }
 });
 
-/* 弹窗内提交答案：校验 → 判定 → 关闭弹窗 */
-confirmBtn.addEventListener("click", function () {
+/* 弹窗内提交答案：校验 → 关闭弹窗 → 判定（AI 不可用时自动回落关键词判定） */
+confirmBtn.addEventListener("click", async function () {
+  if (judging) return;   /* 判定进行中，忽略重复提交 */
+
   const text = answerInput.value.trim();
 
   /* 空内容校验 */
@@ -1011,8 +1146,8 @@ confirmBtn.addEventListener("click", function () {
     return;
   }
 
-  submitAnswer(text);
-  overlay.hidden = true;
+  overlay.hidden = true;      /* 先关闭弹窗，让结果区的判定状态可见 */
+  await submitAnswer(text);
 });
 
 /* 弹窗输入框支持 Ctrl / Cmd + Enter 快捷提交 */
@@ -1245,6 +1380,132 @@ function trackFailStreak(answer) {
   } else {
     failStreak = 0;   /* 有一次匹配成功就重新计数 */
   }
+}
+
+/**
+ * buildJudgePrompt：生成 AI 裁判的系统提示词（汤底 + 5 个要点 + 判定标准）。
+ * @returns {string}
+ */
+function buildJudgePrompt() {
+  return `你是一个海龟汤游戏的裁判。玩家读完了汤面，正在复述他推理出的汤底。
+你要判断玩家的复述命中了下面 5 个要点中的哪几个。
+
+【汤底（标准答案）】
+${SOUP.truth}
+
+【5 个要点】
+1. ${SOUP.points[0].desc}
+2. ${SOUP.points[1].desc}
+3. ${SOUP.points[2].desc}
+4. ${SOUP.points[3].desc}
+5. ${SOUP.points[4].desc}
+
+【判定标准】
+- 只有玩家明确表达出该要点的意思才算命中；含糊暗示、只沾边、只出现了关键词但语义相反，一律不算。
+- 特别注意否定表述：如果玩家说的是「父亲没有去世」「号码是父亲自己换的」这类与汤底相反的说法，
+  对应要点必须判为未命中。
+- 允许同义词、口语化、顺序打乱的表达。
+
+【输出格式】
+只输出一个 JSON 对象，不要输出任何其他文字：
+{"hits":[true,false,false,false,false],"reasons":["一句话理由","...","...","...","..."]}
+hits 必须正好 5 个布尔值，顺序与上面的要点编号一致。`;
+}
+
+/**
+ * judgeByAI：让 AI 逐条判断玩家复述命中了哪几个要点。
+ * 未配置 Key、请求失败、返回内容无法解析时一律返回 null（由调用方回落到关键词判定）。
+ * @param {string} userAnswer 玩家的复述
+ * @returns {Promise<{hits: boolean[], reasons: string[]} | null>}
+ */
+async function judgeByAI(userAnswer) {
+  const cfg = getAIConfig();
+  if (!cfg.key) return null;
+
+  try {
+    const res = await fetch(cfg.base + "/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + cfg.key
+      },
+      body: JSON.stringify({
+        model: cfg.model,
+        messages: [
+          { role: "system", content: buildJudgePrompt() },
+          { role: "user", content: userAnswer }
+        ],
+        max_tokens: 400,
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+        thinking: { type: "disabled" }
+      })
+    });
+
+    /* 非 200 视为失败 */
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const content = (data && data.choices && data.choices[0] && data.choices[0].message)
+      ? data.choices[0].message.content
+      : "";
+
+    /* 解析 JSON；hits 必须是长度为 5 的数组，否则视为失败 */
+    /* 模型可能把 JSON 包在 markdown 代码块里，先清洗再解析 */
+    const cleaned = String(content).replace(/```json/gi, "").replace(/```/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+    if (!parsed || !Array.isArray(parsed.hits) || parsed.hits.length !== 5) return null;
+
+    return {
+      hits: parsed.hits.map(function (v) { return v === true; }),
+      reasons: Array.isArray(parsed.reasons) ? parsed.reasons : []
+    };
+  } catch (err) {
+    return null;   /* 网络错误 / JSON 解析失败都回落到关键词判定 */
+  }
+}
+
+/**
+ * renderReview：在汤底下渲染「你的推理 vs 真相」复盘。
+ * AI 判定逐条列出要点与理由；离线判定只显示一行说明。
+ */
+function renderReview() {
+  if (!lastJudgement) {
+    reviewBox.hidden = true;
+    return;
+  }
+
+  reviewBox.hidden = false;
+
+  if (lastJudgement.mode !== "ai") {
+    /* 离线关键词判定：不逐条展示 */
+    reviewList.hidden = true;
+    reviewTip.hidden = false;
+    return;
+  }
+
+  reviewTip.hidden = true;
+  reviewList.hidden = false;
+  reviewList.textContent = "";
+
+  SOUP.points.forEach(function (point, i) {
+    const hit = lastJudgement.hits[i] === true;
+    const reason = (lastJudgement.reasons[i] || "").trim();
+
+    const li = document.createElement("li");
+
+    const mark = document.createElement("span");
+    mark.className = "review-mark " + (hit ? "ok" : "no");
+    mark.textContent = hit ? "✓" : "✗";
+
+    const desc = document.createElement("span");
+    desc.className = "review-desc";
+    desc.textContent = point.desc + (reason ? " —— " + reason : "");
+
+    li.appendChild(mark);
+    li.appendChild(desc);
+    reviewList.appendChild(li);
+  });
 }
 
 /* =========================================================

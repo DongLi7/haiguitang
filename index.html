@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>海龟汤 · 晚安</title>
+<style>
+  /* ===== 基础主题变量 ===== */
+  :root {
+    --bg: #0b1017;              /* 页面底色：墨黑偏蓝 */
+    --card: #151d29;            /* 卡片底色 */
+    --card-2: #1b2534;          /* 次级底色 */
+    --line: rgba(255, 255, 255, .08);
+    --text: #e8eef7;            /* 主文字 */
+    --text-dim: #94a3b8;        /* 次要文字 */
+    --accent: #7dd3fc;          /* 冷色强调 */
+    --warm: #f0c98a;            /* 暖色强调 */
+    --ok: #4ade80;
+    --bad: #f87171;
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(900px 520px at 50% -12%, rgba(125, 211, 252, .10), transparent 70%),
+      radial-gradient(700px 420px at 85% 105%, rgba(240, 201, 138, .07), transparent 70%),
+      var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== 页面容器：居中、最大宽度 720px ===== */
+  .app {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 16px 64px;
+  }
+
+  /* ===== 顶部标题与玩法说明 ===== */
+  .page-head { text-align: center; margin-bottom: 22px; }
+
+  h1 {
+    margin: 0 0 12px;
+    font-size: 30px;
+    letter-spacing: .38em;
+    text-indent: .38em;              /* 抵消末尾字距，保持视觉居中 */
+    font-weight: 600;
+    background: linear-gradient(180deg, #ffffff, #a9c6e0);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .rules {
+    margin: 0 auto;
+    max-width: 520px;
+    font-size: 13.5px;
+    color: var(--text-dim);
+    text-align: left;
+  }
+
+  .rules p { margin: 0; }
+
+  .rules span { color: var(--warm); }
+
+  /* ===== 卡片 ===== */
+  .card {
+    background-color: var(--card);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, 0));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .35);
+  }
+
+  /* ===== 汤面卡片 ===== */
+  .soup-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .soup-head h2 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--warm);
+  }
+
+  .soup-head h2 .tag {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 400;
+    letter-spacing: .12em;
+    margin-right: 6px;
+  }
+
+  .diff {
+    flex: none;
+    font-size: 13px;
+    letter-spacing: .1em;
+    color: var(--warm);
+    background: rgba(240, 201, 138, .10);
+    border: 1px solid rgba(240, 201, 138, .25);
+    border-radius: 999px;
+    padding: 2px 10px;
+  }
+
+  .surface {
+    margin: 0;
+    font-size: 15.5px;
+    color: #dbe6f3;
+    background: var(--card-2);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    padding: 14px 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* ===== 对话记录区 ===== */
+  .chat {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 4px 2px 14px;
+    scroll-behavior: smooth;
+  }
+
+  .chat:empty::after {
+    content: "还没有任何提问，先试着问一句吧。";
+    color: #5f6f83;
+    font-size: 13px;
+    padding: 6px 2px;
+  }
+
+  .msg {
+    max-width: 88%;
+    animation: pop .18s ease-out;
+  }
+
+  .msg.user { align-self: flex-end; text-align: right; }
+
+  .msg.host { align-self: flex-start; }
+
+  .bubble {
+    display: inline-block;
+    text-align: left;
+    padding: 9px 13px;
+    border-radius: 12px;
+    font-size: 14.5px;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+
+  .msg.user .bubble {
+    background: rgba(125, 211, 252, .14);
+    border: 1px solid rgba(125, 211, 252, .28);
+    color: #d5ecff;
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg.host .bubble {
+    background: var(--card-2);
+    border: 1px solid var(--line);
+    color: #dfe8f3;
+    border-bottom-left-radius: 4px;
+  }
+
+  /* 命中问答条目时的小字备注 */
+  .note {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #7c8b9e;
+    padding: 0 4px;
+  }
+
+  @keyframes pop {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===== 提问区 ===== */
+  .ask {
+    display: flex;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--line);
+  }
+
+  .ask input {
+    flex: 1;
+    min-width: 0;
+    background: #0e1621;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 14.5px;
+    font-family: inherit;
+    padding: 11px 13px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+
+  .ask input::placeholder { color: #5c6b7e; }
+
+  .ask input:focus {
+    border-color: rgba(125, 211, 252, .55);
+    box-shadow: 0 0 0 3px rgba(125, 211, 252, .12);
+  }
+
+  /* ===== 按钮通用样式 ===== */
+  button {
+    font-family: inherit;
+    font-size: 14.5px;
+    border-radius: 10px;
+    padding: 11px 18px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform .12s, opacity .15s, background .15s, border-color .15s;
+    white-space: nowrap;
+  }
+
+  button:active:not(:disabled) { transform: scale(.97); }
+
+  button:disabled { opacity: .42; cursor: not-allowed; }
+
+  .btn-primary {
+    color: #06202c;
+    background: linear-gradient(180deg, #9fe4ff, #6fc9ef);
+    font-weight: 600;
+  }
+
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.06); }
+
+  .btn-ghost {
+    color: var(--text-dim);
+    background: transparent;
+    border-color: var(--line);
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    color: var(--text);
+    border-color: rgba(255, 255, 255, .22);
+  }
+
+  /* 空输入等轻提示 */
+  .hint {
+    min-height: 18px;
+    margin: 8px 2px 0;
+    font-size: 12.5px;
+    color: var(--bad);
+    opacity: 0;
+    transition: opacity .2s;
+  }
+
+  .hint.show { opacity: 1; }
+
+  /* ===== 操作按钮区 ===== */
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .actions button { flex: 1 1 200px; }
+
+  /* ===== 结果区 ===== */
+  .result[hidden] { display: none; }
+
+  .verdict {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .verdict.ok  { color: var(--ok); }
+  .verdict.bad { color: var(--warm); }
+
+  .verdict-sub {
+    margin: 0 0 14px;
+    font-size: 13.5px;
+    color: var(--text-dim);
+  }
+
+  .truth[hidden] { display: none; }
+
+  .truth h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    letter-spacing: .16em;
+    color: var(--warm);
+  }
+
+  .truth p {
+    margin: 0;
+    font-size: 14.5px;
+    color: #d7e2ef;
+    background: var(--card-2);
+    border-left: 3px solid var(--warm);
+    border-radius: 10px;
+    padding: 14px 16px;
+    word-break: break-word;
+  }
+
+  /* ===== 「说出真相」弹窗 ===== */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(4, 8, 13, .72);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+
+  .overlay[hidden] { display: none; }
+
+  .panel {
+    width: 100%;
+    max-width: 520px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+    animation: pop .18s ease-out;
+  }
+
+  .panel h3 {
+    margin: 0 0 6px;
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  .panel .panel-tip {
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .panel textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+    background: #0e1621;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14.5px;
+    line-height: 1.6;
+    padding: 11px 13px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+
+  .panel textarea:focus {
+    border-color: rgba(125, 211, 252, .55);
+    box-shadow: 0 0 0 3px rgba(125, 211, 252, .12);
+  }
+
+  .panel-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  /* ===== 手机适配 ===== */
+  @media (max-width: 480px) {
+    .app { padding: 22px 12px 48px; }
+    h1 { font-size: 24px; }
+    .card { padding: 16px; }
+    .ask { flex-wrap: wrap; }
+    .ask input { flex: 1 1 100%; }
+    .ask button { flex: 1 1 100%; }
+    .msg { max-width: 94%; }
+  }
+</style>
+</head>
+<body>
+
+<main class="app">
+
+  <!-- 顶部：标题 + 玩法说明 -->
+  <header class="page-head">
+    <h1>海龟汤</h1>
+    <div class="rules">
+      <p>1. 先读<span>汤面</span>：一段看似诡异的故事。</p>
+      <p>2. 向主持人<span>提问</span>，只会得到「是 / 否 / 无关 / 无法判断」。</p>
+      <p>3. 用这些答案拼出真相，说出你的<span>汤底</span>。</p>
+    </div>
+  </header>
+
+  <!-- 汤面卡片 -->
+  <section class="card">
+    <div class="soup-head">
+      <h2><span class="tag">汤面</span><span id="soupTitle"></span></h2>
+      <span class="diff" id="soupDiff"></span>
+    </div>
+    <p class="surface" id="soupSurface"></p>
+  </section>
+
+  <!-- 提问 + 对话记录 -->
+  <section class="card">
+    <div class="chat" id="chat" aria-live="polite"></div>
+
+    <form class="ask" id="askForm" autocomplete="off">
+      <input id="askInput" type="text" placeholder="问一个可以用「是 / 否」回答的问题，例如：她是死者的亲人吗？">
+      <button class="btn-primary" type="submit">提问</button>
+    </form>
+
+    <p class="hint" id="askHint"></p>
+  </section>
+
+  <!-- 操作按钮 -->
+  <section class="card">
+    <div class="actions">
+      <button class="btn-primary" id="solveBtn" type="button">我要说出真相</button>
+      <button class="btn-ghost" id="giveUpBtn" type="button">放弃并查看汤底</button>
+    </div>
+  </section>
+
+  <!-- 结果区：判定结果 + 汤底（默认隐藏） -->
+  <section class="card result" id="resultCard" hidden>
+    <div class="verdict" id="verdict"></div>
+    <p class="verdict-sub" id="verdictSub"></p>
+    <div class="truth" id="truthBox" hidden>
+      <h3>汤底</h3>
+      <p id="truthText"></p>
+    </div>
+  </section>
+
+</main>
+
+<!-- 「说出真相」弹窗 -->
+<div class="overlay" id="overlay" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle">
+    <h3 id="panelTitle">说出真相</h3>
+    <p class="panel-tip">用一段话写下你推理出的汤底，命中的关键线索越多，越接近正确答案。</p>
+    <textarea id="answerInput" placeholder="例如：那个号码原本是她父亲的……"></textarea>
+    <p class="hint" id="answerHint"></p>
+    <div class="panel-foot">
+      <button class="btn-ghost" id="cancelBtn" type="button">取消</button>
+      <button class="btn-primary" id="confirmBtn" type="button">提交</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   1. 数据
+   ========================================================= */
+
+/* 本局的完整数据：汤面、汤底、预设问答、判定关键词 */
+const SOUP = {
+  id: "soup-05",
+  title: "晚安",
+  difficulty: "★★★★",
+  surface: "她每天都会给同一个号码发一条「晚安」。三年，一天不落。对方从来没有回复过。三年后的某天，她收到了一条回复：「别再发了。」",
+  truth: "那个号码原本属于她已故的父亲。父亲去世后半年，号码因长期欠费停机，被运营商回收，一年后重新分配给了一个陌生人。她其实早就知道对面已经换人了，却不敢停下来，因为一旦停下，就等于承认父亲真的不在了。收到「别再发了」那天，她删掉了这个号码。",
+  qa: [
+    { keywords: ["恋人", "男朋友", "女朋友", "对象"], answer: "否", note: "不是感情关系" },
+    { keywords: ["认识", "认识对方", "是谁"], answer: "否", note: "她并不认识对方" },
+    { keywords: ["号码", "手机号", "谁用", "原来的"], answer: "无法判断", note: "需要你自己推理" },
+    { keywords: ["还活着", "活着", "活着吗"], answer: "否", note: "原主人已不在" },
+    { keywords: ["亲人", "家人", "爸爸", "父亲", "妈"], answer: "是", note: "是她的亲人" },
+    { keywords: ["换人", "换了", "回收", "停机", "重新分配"], answer: "是", note: "号码确实换过主人" },
+    { keywords: ["为什么", "为什么每天", "每天发"], answer: "无法判断", note: "需要你自己推理" },
+    { keywords: ["知道", "清楚", "明白"], answer: "是", note: "她心里清楚" },
+    { keywords: ["为什么不停", "不停", "坚持"], answer: "无法判断", note: "需要你自己推理" },
+    { keywords: ["烦", "骚扰", "生气"], answer: "是", note: "对方确实觉得打扰" },
+    { keywords: ["坏人", "恶意", "故意"], answer: "否", note: "对方没有恶意" },
+    { keywords: ["收到回复", "之后", "删"], answer: "无法判断", note: "需要你自己推理" },
+    { keywords: ["等回复", "回应", "期待"], answer: "否", note: "她没在等回复" },
+    { keywords: ["发的是", "内容", "固定"], answer: "是", note: "内容固定，就是「晚安」" },
+    { keywords: ["鬼", "超自然", "灵异"], answer: "否", note: "没有超自然设定" }
+  ],
+  truthKeywords: ["父亲", "去世", "号码", "回收", "别人", "陌生人", "不知道", "承认", "不敢"]
+};
+
+/* =========================================================
+   2. 获取页面元素
+   ========================================================= */
+const chatEl      = document.getElementById("chat");       /* 对话记录容器 */
+const askForm     = document.getElementById("askForm");     /* 提问表单 */
+const askInput    = document.getElementById("askInput");    /* 提问输入框 */
+const askHint     = document.getElementById("askHint");     /* 提问区提示文字 */
+const solveBtn    = document.getElementById("solveBtn");    /* 「我要说出真相」按钮 */
+const giveUpBtn   = document.getElementById("giveUpBtn");   /* 「放弃并查看汤底」按钮 */
+const resultCard  = document.getElementById("resultCard");  /* 结果区卡片 */
+const verdictEl   = document.getElementById("verdict");     /* 判定结果文字 */
+const verdictSub  = document.getElementById("verdictSub");  /* 判定补充说明 */
+const truthBox    = document.getElementById("truthBox");    /* 汤底容器（默认隐藏） */
+const truthText   = document.getElementById("truthText");   /* 汤底正文 */
+const overlay     = document.getElementById("overlay");     /* 「说出真相」弹窗遮罩 */
+const answerInput = document.getElementById("answerInput"); /* 弹窗里的输入框 */
+const answerHint  = document.getElementById("answerHint");  /* 弹窗里的提示文字 */
+const cancelBtn   = document.getElementById("cancelBtn");   /* 弹窗取消按钮 */
+const confirmBtn  = document.getElementById("confirmBtn");  /* 弹窗提交按钮 */
+
+/* 轻提示的定时器句柄，避免多次提示互相覆盖 */
+let askHintTimer = null;
+let answerHintTimer = null;
+
+/* =========================================================
+   3. 初始化渲染
+   ========================================================= */
+
+/* initSoup：把 SOUP 里的标题、难度、汤面渲染到页面上 */
+function initSoup() {
+  document.getElementById("soupTitle").textContent = SOUP.title;
+  document.getElementById("soupDiff").textContent = "难度 " + SOUP.difficulty;
+  document.getElementById("soupSurface").textContent = SOUP.surface;
+}
+
+/* =========================================================
+   4. 对话记录相关
+   ========================================================= */
+
+/**
+ * appendMessage：往对话记录区追加一条消息，并自动滚动到最新一条。
+ * @param {"user"|"host"} role 谁说的话
+ * @param {string} text 消息内容
+ * @param {string} [note] 灰色小字备注，仅主持人回答时可能出现
+ */
+function appendMessage(role, text, note) {
+  const msg = document.createElement("div");
+  msg.className = "msg " + role;
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  /* 用 textContent 写入，避免用户输入被当成 HTML 解析 */
+  bubble.textContent = (role === "user" ? "你：" : "主持人：") + text;
+
+  msg.appendChild(bubble);
+
+  if (note) {
+    const noteEl = document.createElement("div");
+    noteEl.className = "note";
+    noteEl.textContent = note;
+    msg.appendChild(noteEl);
+  }
+
+  chatEl.appendChild(msg);
+
+  /* 自动滚动到最新一条 */
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+/**
+ * showHint：在指定提示元素上短暂显示一条提示文字。
+ * @param {HTMLElement} el 提示元素
+ * @param {string} text 提示内容
+ * @param {{timerKey: "ask"|"answer"}} opts 用来记录定时器，避免重复叠加
+ */
+function showHint(el, text, opts) {
+  el.textContent = text;
+  el.classList.add("show");
+
+  if (opts.timerKey === "ask") {
+    clearTimeout(askHintTimer);
+    askHintTimer = setTimeout(() => el.classList.remove("show"), 2200);
+  } else {
+    clearTimeout(answerHintTimer);
+    answerHintTimer = setTimeout(() => el.classList.remove("show"), 2200);
+  }
+}
+
+/* =========================================================
+   5. 核心逻辑：提问匹配
+   ========================================================= */
+
+/**
+ * matchQuestion：在 SOUP.qa 中找出与问题最匹配的一条预设问答。
+ * 规则：逐条统计 keywords 里有多少个出现在问题中（includes 判断），
+ *       取命中数最多且至少命中 1 个的那一条。
+ * @param {string} question 玩家输入的问题
+ * @returns {{answer: string, note: string}} 主持人的回答与备注
+ */
+function matchQuestion(question) {
+  let best = null;      /* 当前最匹配的问答条目 */
+  let bestHits = 0;     /* 当前最高命中数 */
+
+  SOUP.qa.forEach(function (item) {
+    let hits = 0;
+    item.keywords.forEach(function (kw) {
+      if (question.includes(kw)) hits++;
+    });
+
+    /* 命中数严格大于才替换，保证命中数相同时取靠前的条目 */
+    if (hits > bestHits) {
+      bestHits = hits;
+      best = item;
+    }
+  });
+
+  /* 找到了至少命中 1 个关键词的条目 */
+  if (best && bestHits >= 1) {
+    return { answer: best.answer, note: best.note || "" };
+  }
+
+  /* 一个都没命中 */
+  return { answer: "无法判断", note: "这个问题我判断不了，换个问法试试" };
+}
+
+/* =========================================================
+   6. 核心逻辑：答案判定
+   ========================================================= */
+
+/**
+ * submitAnswer：判定玩家写下的「汤底」是否正确。
+ * 规则：统计 SOUP.truthKeywords 中有多少个出现在玩家文字里，
+ *       命中数 >= 4 判定为解出，否则判定为未解出。
+ * @param {string} text 玩家写下的推理
+ */
+function submitAnswer(text) {
+  let hits = 0;
+
+  SOUP.truthKeywords.forEach(function (kw) {
+    if (text.includes(kw)) hits++;
+  });
+
+  resultCard.hidden = false;
+
+  if (hits >= 4) {
+    /* 解出：显示汤底 */
+    verdictEl.className = "verdict ok";
+    verdictEl.textContent = "解出真相！";
+    verdictSub.textContent = "就是这个故事。你抓住了最关键的那几条线。";
+    revealTruth();
+  } else {
+    /* 未解出：只提示，不公布汤底 */
+    verdictEl.className = "verdict bad";
+    verdictEl.textContent = "还不对，再想想。";
+    verdictSub.textContent = "再回到汤面里看看：号码、父亲、以及她为什么不肯停下来。";
+  }
+
+  /* 把结果区滚动到视野内，方便玩家看到判定 */
+  resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+/* =========================================================
+   7. 汤底显示
+   ========================================================= */
+
+/**
+ * revealTruth：公布汤底，并把「放弃并查看汤底」按钮禁用。
+ * 解出答案与主动放弃都会走到这里。
+ */
+function revealTruth() {
+  truthText.textContent = SOUP.truth;
+  truthBox.hidden = false;
+
+  giveUpBtn.disabled = true;   /* 已经看到汤底，按钮不再可用 */
+}
+
+/* =========================================================
+   8. 事件绑定
+   ========================================================= */
+
+/* 提交提问：校验 → 记录提问 → 匹配回答 → 清空并聚焦 */
+askForm.addEventListener("submit", function (event) {
+  event.preventDefault();
+
+  const question = askInput.value.trim();
+
+  /* 空内容校验：提示后直接返回，不做任何处理 */
+  if (!question) {
+    showHint(askHint, "先说一句话再提问吧。", { timerKey: "ask" });
+    askInput.focus();
+    return;
+  }
+
+  /* 记录玩家的提问 */
+  appendMessage("user", question);
+
+  /* 主持人回答 */
+  const result = matchQuestion(question);
+  appendMessage("host", result.answer, result.note);
+
+  /* 清空输入框并重新获得焦点，方便连续提问 */
+  askInput.value = "";
+  askInput.focus();
+});
+
+/* 打开「说出真相」弹窗 */
+solveBtn.addEventListener("click", function () {
+  overlay.hidden = false;
+  answerInput.value = "";
+  answerHint.classList.remove("show");
+  answerInput.focus();
+});
+
+/* 关闭弹窗（取消） */
+cancelBtn.addEventListener("click", function () {
+  overlay.hidden = true;
+  solveBtn.focus();
+});
+
+/* 点击遮罩空白处也可以关闭弹窗 */
+overlay.addEventListener("click", function (event) {
+  if (event.target === overlay) {
+    overlay.hidden = true;
+    solveBtn.focus();
+  }
+});
+
+/* 弹窗内提交答案：校验 → 判定 → 关闭弹窗 */
+confirmBtn.addEventListener("click", function () {
+  const text = answerInput.value.trim();
+
+  /* 空内容校验 */
+  if (!text) {
+    showHint(answerHint, "还没写呢，把你的推理写下来吧。", { timerKey: "answer" });
+    answerInput.focus();
+    return;
+  }
+
+  submitAnswer(text);
+  overlay.hidden = true;
+});
+
+/* 弹窗输入框支持 Ctrl / Cmd + Enter 快捷提交 */
+answerInput.addEventListener("keydown", function (event) {
+  if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault();
+    confirmBtn.click();
+  }
+});
+
+/* 放弃并查看汤底：直接公布汤底并禁用按钮 */
+giveUpBtn.addEventListener("click", function () {
+  resultCard.hidden = false;
+  verdictEl.className = "verdict bad";
+  verdictEl.textContent = "你选择了放弃。";
+  verdictSub.textContent = "没关系，先看看真相，再回去对照你的推理。";
+
+  revealTruth();
+  resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+
+/* =========================================================
+   9. 启动
+   ========================================================= */
+initSoup();
+askInput.focus();
+</script>
+</body>
+</html>

@@ -405,9 +405,111 @@
     .ask button { flex: 1 1 100%; }
     .msg { max-width: 94%; }
   }
+
+  /* ===== AI 主持模式：设置按钮 / 状态 / 计数 ===== */
+
+  /* 右上角固定「⚙ 设置」按钮 */
+  .settings-btn {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 15;
+    font-size: 13px;
+    padding: 7px 13px;
+    color: var(--text-dim);
+    background: rgba(21, 29, 41, .9);
+    border: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+
+  .settings-btn:hover { color: var(--text); border-color: rgba(255, 255, 255, .22); }
+
+  /* 页面顶部的模式状态条 */
+  .mode-status {
+    margin: 12px 0 0;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+
+  /* 提问次数 */
+  .counter {
+    margin: 0 0 10px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    text-align: right;
+  }
+
+  /* 设置面板：标题栏 + 字段 + 状态 */
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+
+  .panel-head h3 { margin: 0; }
+
+  .close-btn {
+    flex: none;
+    padding: 2px 9px;
+    font-size: 18px;
+    line-height: 1.2;
+    color: var(--text-dim);
+    background: transparent;
+    border-color: transparent;
+  }
+
+  .close-btn:hover { color: var(--text); }
+
+  .field { display: block; margin-bottom: 12px; }
+
+  .field > span {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+
+  .panel input {
+    width: 100%;
+    background: #0e1621;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14.5px;
+    padding: 10px 13px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+
+  .panel input:focus {
+    border-color: rgba(125, 211, 252, .55);
+    box-shadow: 0 0 0 3px rgba(125, 211, 252, .12);
+  }
+
+  .settings-status {
+    min-height: 18px;
+    margin: 4px 2px 0;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    word-break: break-word;
+  }
+
+  .settings-status.ok  { color: var(--ok); }
+  .settings-status.bad { color: var(--bad); }
+
+  /* 等待 AI 回答时的占位气泡 */
+  .msg.pending .bubble { color: var(--text-dim); }
+
 </style>
 </head>
 <body>
+
+<!-- 右上角：AI 主持设置入口 -->
+<button class="settings-btn" id="settingsBtn" type="button">⚙ 设置</button>
 
 <main class="app">
 
@@ -419,6 +521,8 @@
       <p>2. 向主持人<span>提问</span>，只会得到「是 / 否 / 无关 / 无法判断」。</p>
       <p>3. 用这些答案拼出真相，说出你的<span>汤底</span>。</p>
     </div>
+    <!-- 模式状态：已配置 Key 为 AI 主持，否则为离线匹配 -->
+    <p class="mode-status" id="modeStatus">⚪ 离线模式（点设置接入 AI）</p>
   </header>
 
   <!-- 汤面卡片 -->
@@ -432,11 +536,12 @@
 
   <!-- 提问 + 对话记录 -->
   <section class="card">
+    <p class="counter" id="askCounter">已提问 0 / 40</p>
     <div class="chat" id="chat" aria-live="polite"></div>
 
     <form class="ask" id="askForm" autocomplete="off">
       <input id="askInput" type="text" placeholder="问一个可以用「是 / 否」回答的问题，例如：她是死者的亲人吗？">
-      <button class="btn-primary" type="submit">提问</button>
+      <button class="btn-primary" id="askSubmitBtn" type="submit">提问</button>
     </form>
 
     <p class="hint" id="askHint"></p>
@@ -472,6 +577,40 @@
     <div class="panel-foot">
       <button class="btn-ghost" id="cancelBtn" type="button">取消</button>
       <button class="btn-primary" id="confirmBtn" type="button">提交</button>
+    </div>
+  </div>
+</div>
+
+<!-- 设置弹窗：AI 主持接口配置 -->
+<div class="overlay" id="settingsOverlay" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="panel-head">
+      <h3 id="settingsTitle">设置 · AI 主持</h3>
+      <button class="close-btn" id="closeCfgBtn" type="button" aria-label="关闭设置">×</button>
+    </div>
+    <p class="panel-tip">填写接口地址、模型名与 API Key 后，提问将由 AI 主持人回答；不填 Key 则使用离线关键词匹配。</p>
+
+    <label class="field">
+      <span>接口地址</span>
+      <input id="cfgBase" type="text" placeholder="https://api.deepseek.com">
+    </label>
+
+    <label class="field">
+      <span>模型名</span>
+      <input id="cfgModel" type="text" placeholder="deepseek-flash">
+    </label>
+
+    <label class="field">
+      <span>API Key</span>
+      <input id="cfgKey" type="password" placeholder="sk-..." autocomplete="off">
+    </label>
+
+    <p class="settings-status" id="settingsStatus"></p>
+
+    <div class="panel-foot">
+      <button class="btn-primary" id="saveCfgBtn" type="button">保存</button>
+      <button class="btn-ghost" id="testCfgBtn" type="button">测试连接</button>
+      <button class="btn-ghost" id="clearCfgBtn" type="button">清除</button>
     </div>
   </div>
 </div>
@@ -528,6 +667,21 @@ const answerHint  = document.getElementById("answerHint");  /* 弹窗里的提�
 const cancelBtn   = document.getElementById("cancelBtn");   /* 弹窗取消按钮 */
 const confirmBtn  = document.getElementById("confirmBtn");  /* 弹窗提交按钮 */
 
+/* AI 主持模式相关元素 */
+const modeStatus      = document.getElementById("modeStatus");      /* 顶部模式状态 */
+const askCounter      = document.getElementById("askCounter");      /* 提问次数显示 */
+const askSubmitBtn    = document.getElementById("askSubmitBtn");    /* 「提问」按钮 */
+const settingsBtn     = document.getElementById("settingsBtn");     /* 「⚙ 设置」按钮 */
+const settingsOverlay = document.getElementById("settingsOverlay"); /* 设置弹窗遮罩 */
+const cfgBase         = document.getElementById("cfgBase");         /* 接口地址输入框 */
+const cfgModel        = document.getElementById("cfgModel");        /* 模型名输入框 */
+const cfgKey          = document.getElementById("cfgKey");          /* API Key 输入框 */
+const settingsStatus  = document.getElementById("settingsStatus");  /* 设置面板里的状态文字 */
+const saveCfgBtn      = document.getElementById("saveCfgBtn");      /* 保存按钮 */
+const testCfgBtn      = document.getElementById("testCfgBtn");      /* 测试连接按钮 */
+const clearCfgBtn     = document.getElementById("clearCfgBtn");     /* 清除按钮 */
+const closeCfgBtn     = document.getElementById("closeCfgBtn");     /* 关闭设置按钮 */
+
 /* 轻提示的定时器句柄，避免多次提示互相覆盖 */
 let askHintTimer = null;
 let answerHintTimer = null;
@@ -535,6 +689,19 @@ let answerHintTimer = null;
 /* 连续返回「拿不准」的次数，以及引导提示是否已经出现过 */
 let failStreak = 0;
 let guideShown = false;
+
+/* ---------- AI 主持模式配置与运行状态 ---------- */
+const MAX_QUESTIONS = 40;                       /* 单局提问次数上限 */
+const DEFAULT_BASE = "https://api.deepseek.com";/* 默认接口地址 */
+const DEFAULT_MODEL = "deepseek-flash";         /* 默认模型名 */
+const LS_BASE = "hs_api_base";                  /* localStorage 键：接口地址 */
+const LS_MODEL = "hs_api_model";                /* localStorage 键：模型名 */
+const LS_KEY = "hs_api_key";                    /* localStorage 键：API Key */
+const AI_ANSWER_WORDS = ["是", "否", "是也不是", "无关"]; /* AI 合法回答词 */
+
+let aiHistory = [];        /* 内存中的对话历史，只保留最近 8 轮 */
+let questionCount = 0;     /* 本局已提问次数 */
+let aiPending = false;     /* 是否有一个 AI 请求正在进行中 */
 
 /* =========================================================
    3. 初始化渲染
@@ -556,6 +723,7 @@ function initSoup() {
  * @param {"user"|"host"|"system"} role 谁说的话（system 为系统提示，不带前缀）
  * @param {string} text 消息内容
  * @param {string} [note] 灰色小字备注，仅主持人回答时可能出现
+ * @returns {HTMLElement} 新插入的消息节点，便于后续原地替换内容
  */
 function appendMessage(role, text, note) {
   const msg = document.createElement("div");
@@ -580,6 +748,8 @@ function appendMessage(role, text, note) {
 
   /* 自动滚动到最新一条 */
   chatEl.scrollTop = chatEl.scrollHeight;
+
+  return msg;
 }
 
 /**
@@ -743,8 +913,8 @@ function revealTruth() {
    8. 事件绑定
    ========================================================= */
 
-/* 提交提问：校验 → 记录提问 → 匹配回答 → 清空并聚焦 */
-askForm.addEventListener("submit", function (event) {
+/* 提交提问：校验 → 计数 → AI 或离线回答 → 记录历史 → 清空并聚焦 */
+askForm.addEventListener("submit", async function (event) {
   event.preventDefault();
 
   const question = askInput.value.trim();
@@ -756,29 +926,55 @@ askForm.addEventListener("submit", function (event) {
     return;
   }
 
-  /* 记录玩家的提问 */
-  appendMessage("user", question);
-
-  /* 主持人回答 */
-  const result = matchQuestion(question);
-  appendMessage("host", result.answer, result.note);
-
-  /* 统计连续「拿不准」的次数；连续 2 次时插入一次引导提示（只出现一次） */
-  if (result.answer === "拿不准") {
-    failStreak++;
-    if (failStreak >= 2 && !guideShown) {
-      guideShown = true;
-      appendMessage(
-        "system",
-        "要不要换个角度问问？\n· 她认识对方吗？\n· 这个号码以前属于谁？\n· 号码有没有换过主人？"
-      );
-    }
-  } else {
-    failStreak = 0;   /* 有一次匹配成功就重新计数 */
+  /* 次数用尽 / AI 正在回答时，不再受理新的提问 */
+  if (questionCount >= MAX_QUESTIONS || aiPending) {
+    askInput.focus();
+    return;
   }
 
-  /* 清空输入框并重新获得焦点，方便连续提问 */
+  /* 每提问一次（无论 AI 还是离线）计数 +1 */
+  questionCount++;
+  syncAskControls();
+
+  /* 记录玩家的提问，并清空输入框 */
+  appendMessage("user", question);
   askInput.value = "";
+
+  const { key } = getAIConfig();
+
+  if (key) {
+    /* ---------- AI 主持模式 ---------- */
+    aiPending = true;
+    syncAskControls();
+
+    /* 先插入「思考中」占位气泡，稍后原地替换 */
+    const placeholder = appendMessage("host", "主持人思考中…");
+    placeholder.classList.add("pending");
+
+    try {
+      const result = await askAI(question);
+      updateHostMessage(placeholder, result.answer, result.note);
+      pushHistory(question, result.answer, result.note);
+    } catch (err) {
+      /* 失败：占位气泡改成错误提示，并自动用离线匹配兜底，保证不卡住 */
+      updateHostMessage(placeholder, "暂时联系不上（" + (err.message || String(err)) + "）", "");
+      const offline = matchQuestion(question);
+      appendMessage("host", offline.answer, offline.note);
+      pushHistory(question, offline.answer, offline.note);
+      trackFailStreak(offline.answer);
+    } finally {
+      aiPending = false;
+      syncAskControls();
+    }
+  } else {
+    /* ---------- 离线模式：与原来完全一致 ---------- */
+    const result = matchQuestion(question);
+    appendMessage("host", result.answer, result.note);
+    pushHistory(question, result.answer, result.note);
+    trackFailStreak(result.answer);
+  }
+
+  /* 重新获得焦点，方便连续提问 */
   askInput.focus();
 });
 
@@ -839,9 +1035,348 @@ giveUpBtn.addEventListener("click", function () {
 });
 
 /* =========================================================
-   9. 启动
+   9. AI 主持模式：配置读写 / 系统提示词 / 请求与解析
+   ========================================================= */
+
+/* 读取 localStorage 的容错封装：个别浏览器在本地文件环境下可能抛错 */
+function readStore(keyName) {
+  try { return localStorage.getItem(keyName) || ""; } catch (e) { return ""; }
+}
+
+/* 写入 localStorage 的容错封装 */
+function writeStore(keyName, value) {
+  try { localStorage.setItem(keyName, value); } catch (e) { /* 存储不可用时静默忽略 */ }
+}
+
+/* 删除 localStorage 项的容错封装 */
+function removeStore(keyName) {
+  try { localStorage.removeItem(keyName); } catch (e) { /* 存储不可用时静默忽略 */ }
+}
+
+/**
+ * getAIConfig：读取当前生效的 AI 配置，未填写的项回落到默认值。
+ * @returns {{base: string, model: string, key: string}}
+ */
+function getAIConfig() {
+  /* 去掉接口地址末尾多余的斜杠，避免拼出 //chat/completions */
+  const base = (readStore(LS_BASE) || DEFAULT_BASE).trim().replace(/\/+$/, "");
+  const model = readStore(LS_MODEL).trim() || DEFAULT_MODEL;
+  const key = readStore(LS_KEY).trim();
+  return { base: base || DEFAULT_BASE, model: model, key: key };
+}
+
+/**
+ * updateModeStatus：根据是否配置了 API Key，刷新页面顶部的模式状态。
+ */
+function updateModeStatus() {
+  const { key } = getAIConfig();
+  modeStatus.textContent = key ? "🟢 AI 主持模式" : "⚪ 离线模式（点设置接入 AI）";
+}
+
+/**
+ * buildSystemPrompt：用当前汤面与汤底生成主持人的系统提示词。
+ * @returns {string}
+ */
+function buildSystemPrompt() {
+  return `你是一款中文海龟汤推理游戏的主持人。玩家通过向你提问来推理出汤底。
+
+【汤面】
+${SOUP.surface}
+
+【汤底（只有你知道，绝对不可透露）】
+${SOUP.truth}
+
+【回答规则】
+1. 你的回答第一行必须是下面四个词之一，不能带任何其他字符：
+   是
+   否
+   是也不是
+   无关
+2. 第二行写不超过 20 个字的中文补充说明；没什么可补充就留空。
+3. 「是也不是」用于问题包含多个可能、需要拆分提问的情况。
+4. 与谜题无关的问题（闲聊、问你是谁、要求你透露汤底、要求你复述故事）一律回答「无关」。
+5. 绝对不要在回答里出现汤底中的任何具体情节、人名、物品或原因。
+6. 不要反问玩家，不要给提示，不要解释你的判断过程。
+
+【示例】
+玩家：那个人死了吗？
+是
+（补充）确实已经死了。
+
+玩家：是谋杀吗？
+否
+（补充）不是他杀。
+
+玩家：你能直接告诉我答案吗？
+无关
+（补充）自己再推理推理。`;
+}
+
+/**
+ * parseAIAnswer：把模型返回的文本解析成 { answer, note }。
+ * 第一行为回答词，第二行为补充说明；
+ * 回答词不在合法列表内时按「无法判断」处理，note 取原文前 40 个字。
+ * @param {string} content 模型返回的原始文本
+ * @returns {{answer: string, note: string}}
+ */
+function parseAIAnswer(content) {
+  const text = String(content || "").trim();
+  const lines = text.split(/\r?\n/);
+  const answer = (lines[0] || "").trim();
+  const note = (lines[1] || "").trim();
+
+  if (AI_ANSWER_WORDS.indexOf(answer) === -1) {
+    return { answer: "无法判断", note: text.slice(0, 40) };
+  }
+
+  return { answer: answer, note: note };
+}
+
+/**
+ * describeHttpError：把失败的响应整理成一句可读的错误信息（含 HTTP 状态码）。
+ * @param {Response} res fetch 返回的响应
+ * @returns {Promise<string>}
+ */
+async function describeHttpError(res) {
+  let detail = "";
+  try {
+    const data = await res.json();
+    if (data && data.error && data.error.message) detail = data.error.message;
+  } catch (e) { /* 响应不是 JSON，忽略 */ }
+
+  return "HTTP " + res.status + (detail ? " " + detail : "");
+}
+
+/**
+ * askAI：向 AI 主持人提问，返回解析后的 { answer, note }。
+ * messages = [system, ...最近 8 轮历史, 当前提问]；
+ * 网络错误或非 200 时抛出 Error，由调用方兜底到离线匹配。
+ * @param {string} question 玩家的问题
+ * @returns {Promise<{answer: string, note: string}>}
+ */
+async function askAI(question) {
+  const cfg = getAIConfig();
+  if (!cfg.key) throw new Error("未配置 API Key");
+
+  const messages = [{ role: "system", content: buildSystemPrompt() }]
+    .concat(aiHistory)
+    .concat([{ role: "user", content: question }]);
+
+  const res = await fetch(cfg.base + "/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + cfg.key
+    },
+    body: JSON.stringify({
+      model: cfg.model,
+      messages: messages,
+      max_tokens: 100,
+      temperature: 0.3,
+      thinking: { type: "disabled" }   /* 原生 fetch：thinking 直接放在 body 最外层 */
+    })
+  });
+
+  if (!res.ok) throw new Error(await describeHttpError(res));
+
+  const data = await res.json();
+  const content = (data && data.choices && data.choices[0] && data.choices[0].message)
+    ? data.choices[0].message.content
+    : "";
+
+  return parseAIAnswer(content);
+}
+
+/**
+ * pushHistory：把一轮问答写入内存历史，只保留最近 8 轮（16 条消息）。
+ * @param {string} question 玩家提问
+ * @param {string} answer 主持人回答
+ * @param {string} note 补充说明
+ */
+function pushHistory(question, answer, note) {
+  aiHistory.push({ role: "user", content: question });
+  aiHistory.push({ role: "assistant", content: answer + "\n" + note });
+
+  /* 超出 8 轮时从头部丢弃 */
+  if (aiHistory.length > 16) aiHistory = aiHistory.slice(-16);
+}
+
+/**
+ * updateHostMessage：把「思考中」占位气泡原地替换成真实回答，并同步备注行。
+ * @param {HTMLElement} msgEl appendMessage 返回的消息节点
+ * @param {string} answer 回答词
+ * @param {string} note 补充说明
+ */
+function updateHostMessage(msgEl, answer, note) {
+  msgEl.classList.remove("pending");
+
+  const bubble = msgEl.querySelector(".bubble");
+  if (bubble) bubble.textContent = "主持人：" + answer;
+
+  let noteEl = msgEl.querySelector(".note");
+  if (note) {
+    if (!noteEl) {
+      noteEl = document.createElement("div");
+      noteEl.className = "note";
+      msgEl.appendChild(noteEl);
+    }
+    noteEl.textContent = note;
+  } else if (noteEl) {
+    noteEl.remove();
+  }
+
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+/**
+ * trackFailStreak：维护连续「拿不准」计数，连续 2 次时插入一次引导提示（只出现一次）。
+ * @param {string} answer 本次主持人回答
+ */
+function trackFailStreak(answer) {
+  if (answer === "拿不准") {
+    failStreak++;
+    if (failStreak >= 2 && !guideShown) {
+      guideShown = true;
+      appendMessage(
+        "system",
+        "要不要换个角度问问？\n· 她认识对方吗？\n· 这个号码以前属于谁？\n· 号码有没有换过主人？"
+      );
+    }
+  } else {
+    failStreak = 0;   /* 有一次匹配成功就重新计数 */
+  }
+}
+
+/* =========================================================
+   10. 设置面板交互
+   ========================================================= */
+
+/**
+ * setSettingsStatus：在设置面板里显示一条状态文字。
+ * @param {string} text 文案
+ * @param {""|"ok"|"bad"} type 颜色类型
+ */
+function setSettingsStatus(text, type) {
+  settingsStatus.textContent = text;
+  settingsStatus.className = "settings-status" + (type ? " " + type : "");
+}
+
+/* 打开设置面板：用已保存的配置填充输入框 */
+settingsBtn.addEventListener("click", function () {
+  cfgBase.value = readStore(LS_BASE) || DEFAULT_BASE;
+  cfgModel.value = readStore(LS_MODEL) || DEFAULT_MODEL;
+  cfgKey.value = readStore(LS_KEY);
+  setSettingsStatus("", "");
+  settingsOverlay.hidden = false;
+  cfgKey.focus();
+});
+
+/* closeSettings：关闭设置面板，并刷新页面顶部的模式状态 */
+function closeSettings() {
+  settingsOverlay.hidden = true;
+  updateModeStatus();
+  settingsBtn.focus();
+}
+
+closeCfgBtn.addEventListener("click", closeSettings);
+
+/* 点击遮罩空白处也可以关闭设置面板 */
+settingsOverlay.addEventListener("click", function (event) {
+  if (event.target === settingsOverlay) closeSettings();
+});
+
+/* 保存：把三项配置写入 localStorage */
+saveCfgBtn.addEventListener("click", function () {
+  writeStore(LS_BASE, cfgBase.value.trim());
+  writeStore(LS_MODEL, cfgModel.value.trim());
+  writeStore(LS_KEY, cfgKey.value.trim());
+
+  updateModeStatus();
+  setSettingsStatus("已保存 ✓", "ok");
+});
+
+/* 清除：删除三项配置，输入框恢复默认值 */
+clearCfgBtn.addEventListener("click", function () {
+  removeStore(LS_BASE);
+  removeStore(LS_MODEL);
+  removeStore(LS_KEY);
+
+  cfgBase.value = DEFAULT_BASE;
+  cfgModel.value = DEFAULT_MODEL;
+  cfgKey.value = "";
+
+  updateModeStatus();
+  setSettingsStatus("已清除，当前为离线模式", "");
+});
+
+/* 测试连接：用极短请求（max_tokens 5）验证地址、模型与 Key */
+testCfgBtn.addEventListener("click", async function () {
+  const base = (cfgBase.value.trim() || DEFAULT_BASE).replace(/\/+$/, "");
+  const model = cfgModel.value.trim() || DEFAULT_MODEL;
+  const key = cfgKey.value.trim();
+
+  if (!key) {
+    setSettingsStatus("请先填写 API Key", "bad");
+    return;
+  }
+
+  testCfgBtn.disabled = true;
+  setSettingsStatus("测试中…", "");
+
+  try {
+    const res = await fetch(base + "/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + key
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [{ role: "user", content: "你好" }],
+        max_tokens: 5
+      })
+    });
+
+    if (!res.ok) throw new Error(await describeHttpError(res));
+
+    const data = await res.json();
+    const modelName = (data && data.model) || model;
+    setSettingsStatus("连接成功 ✓ 模型：" + modelName, "ok");
+  } catch (err) {
+    setSettingsStatus("连接失败：" + (err.message || String(err)), "bad");
+  } finally {
+    testCfgBtn.disabled = false;
+  }
+});
+
+/* =========================================================
+   11. 提问次数与控件状态
+   ========================================================= */
+
+/**
+ * syncAskControls：刷新「已提问 x / 40」，次数用尽时禁用输入框与按钮并给出提示。
+ */
+function syncAskControls() {
+  const usedUp = questionCount >= MAX_QUESTIONS;
+
+  askCounter.textContent = "已提问 " + questionCount + " / " + MAX_QUESTIONS;
+  askInput.disabled = usedUp;
+  askSubmitBtn.disabled = usedUp || aiPending;
+
+  if (usedUp) {
+    clearTimeout(askHintTimer);
+    askInput.placeholder = "提问次数已用完";
+    askHint.textContent = "提问次数用完了，可以试着说说你的答案，或者放弃看汤底";
+    askHint.classList.add("show");
+  }
+}
+
+/* =========================================================
+   12. 启动
    ========================================================= */
 initSoup();
+updateModeStatus();
+syncAskControls();
 askInput.focus();
 </script>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
-<title>海龟汤 · 晚安</title>
+<title>海龟汤 · 文字推理</title>
 <style>
   /* ===== 基础主题变量 ===== */
   :root {
@@ -1019,6 +1019,7 @@ function initSoup() {
   document.getElementById("soupTitle").textContent = soup.title;
   document.getElementById("soupDiff").textContent = "难度 " + soup.difficulty;
   document.getElementById("soupSurface").textContent = soup.surface;
+  document.title = "海龟汤 · " + soup.title;
   askInput.placeholder = ASK_PLACEHOLDERS[currentSoupId] || "问一个可以用「是 / 否」回答的问题";
 }
 

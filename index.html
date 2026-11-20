@@ -406,6 +406,24 @@
     color: var(--text-dim);
   }
 
+  .bank-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .bank-clear {
+    padding: 0;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    background: transparent;
+    border-color: transparent;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .bank-clear:hover { color: var(--text); }
+
   .bank {
     display: flex;
     gap: 10px;
@@ -636,7 +654,10 @@
   <section class="card">
     <div class="bank-head">
       <span>题库</span>
-      <span class="bank-stat" id="bankStat">已解出 0 / 共 2 题</span>
+      <span class="bank-right">
+        <span class="bank-stat" id="bankStat">已解出 0 / 共 5 题</span>
+        <button class="bank-clear" id="clearProgressBtn" type="button">清除进度</button>
+      </span>
     </div>
     <div class="bank" id="soupBank"></div>
   </section>
@@ -745,6 +766,36 @@
 
 /* 题库：每个汤的字段结构一致（id / title / difficulty / surface / truth / qa / points / truthKeywords） */
 const SOUPS = {
+  "soup-01": {
+    id: "soup-01",
+    title: "雨中的伞",
+    difficulty: "★★☆",
+    surface: "葬礼那天下着雨。别人都撑着伞，只有他把自己那把收了起来，抱在怀里，站在雨里。有人提醒他会淋出病来，他说：「伞不能湿。」",
+    truth: "那把伞是死者留下的遗物。雨伞的内侧，死者生前用遇水就晕开的墨，一笔一笔写下了在场每个人的名字，还有一句想对他们说的话。他宁可自己淋透，也不敢让雨水渗进伞面——那些字一旦花了，就再也没有第二份了。",
+    qa: [
+      { keywords: ["死者", "去世", "死了", "亡者", "逝者", "葬礼"], answer: "是", note: "这场葬礼的主角" },
+      { keywords: ["伞", "雨伞", "黑伞"], answer: "是", note: "关键就在这把伞上" },
+      { keywords: ["遗物", "留下的", "纪念", "遗物吗"], answer: "是", note: "伞是遗物" },
+      { keywords: ["字", "写字", "名字", "留言", "签名"], answer: "是", note: "伞上有字" },
+      { keywords: ["怕", "担心", "湿", "淋坏", "冲掉"], answer: "是", note: "他确实怕" },
+      { keywords: ["雨", "下雨", "淋雨"], answer: "是", note: "雨是关键条件" },
+      { keywords: ["内", "伞里", "里面", "内侧"], answer: "是", note: "字就在伞的内侧" },
+      { keywords: ["爱", "恋人", "朋友", "家人", "亲人"], answer: "无法判断", note: "需要你自己推理" },
+      { keywords: ["病", "生病", "杀", "凶手", "意外", "事故"], answer: "否", note: "死因与谜题无关" },
+      { keywords: ["傻", "奇怪", "不正常", "疯"], answer: "否", note: "他很清醒" },
+      { keywords: ["为什么", "原因"], answer: "无法判断", note: "需要你自己推理" },
+      { keywords: ["鬼", "灵异", "超自然", "诅咒"], answer: "否", note: "没有超自然设定" }
+    ],
+    points: [
+      { core: true,  desc: "那把伞是死者留下的遗物" },
+      { core: true,  desc: "伞的内侧写满了字，是死者写给在场每个人的话" },
+      { core: true,  desc: "他收起伞，是怕雨水渗进去把那些字冲花" },
+      { core: false, desc: "那些字用的墨一遇到水就会晕开" },
+      { core: false, desc: "他宁可自己淋透，也要保住那些字" }
+    ],
+    truthKeywords: ["伞", "遗物", "字", "写", "冲", "雨水", "墨", "内侧", "淋"]
+  },
+
   "soup-05": {
     id: "soup-05",
     title: "晚安",
@@ -776,7 +827,7 @@ const SOUPS = {
       { core: false, desc: "她一直发下去，是因为不敢承认父亲真的不在了" },
       { core: false, desc: "「别再发了」是现在用这个号码的陌生人发的，他觉得被打扰" }
     ],
-    truthKeywords: ["父亲", "去世", "号码", "回收", "别人", "陌生人", "不知道", "承认", "不敢"]
+    truthKeywords: ["父亲", "去世", "号码", "回收", "别人", "陌生人", "承认", "不敢"]
   },
 
   "soup-02": {
@@ -807,11 +858,74 @@ const SOUPS = {
       { core: false, desc: "他猜到了真相，愣住没回复是因为不知该不该拆穿她" }
     ],
     truthKeywords: ["医院", "住院", "病", "窗", "墙", "没去", "编", "骗", "瞒", "担心"]
+  },
+
+  "soup-03": {
+    id: "soup-03",
+    title: "退掉的票",
+    difficulty: "★★★",
+    surface: "腊月二十八，他把自己抢了半个月的火车票退了。他妈在电话里问：「几号到家？」他说：「票退了，今年不回了。」挂了电话，他一个人在出租屋里坐到天亮。",
+    truth: "他四个月前被公司裁掉了，一直没跟家里说，还照旧在电话里讲工作上的事。过年回家要给父母包红包、给几个孩子买礼物，他拿不出这笔钱；而且只要回去，失业这件事早晚会露馅。退票不是不想回，是不敢回。",
+    qa: [
+      { keywords: ["失业", "裁员", "没工作", "丢了工作", "下岗", "辞退"], answer: "是", note: "他已经没有工作了" },
+      { keywords: ["没钱", "缺钱", "穷", "借"], answer: "是", note: "经济上撑不住了" },
+      { keywords: ["不想回", "不愿回", "讨厌家", "家里不好", "恨"], answer: "否", note: "他想回，是不敢回" },
+      { keywords: ["票", "火车票", "高铁票", "退票"], answer: "是", note: "票确实是关键" },
+      { keywords: ["父母", "妈妈", "他妈", "家里", "家人"], answer: "是", note: "他在瞒着家里" },
+      { keywords: ["骗", "撒谎", "瞒", "没说"], answer: "是", note: "他一直在撒谎" },
+      { keywords: ["红包", "礼物", "花销", "钱"], answer: "是", note: "他拿不出这笔钱" },
+      { keywords: ["死", "去世", "生病", "病"], answer: "否", note: "没有人去世或生病" },
+      { keywords: ["女朋友", "恋人", "对象", "结婚"], answer: "否", note: "与感情无关" },
+      { keywords: ["愧疚", "自责", "难过", "崩溃", "难受"], answer: "是", note: "他很难受" },
+      { keywords: ["为什么", "原因", "不敢", "怕"], answer: "无法判断", note: "需要你自己推理" },
+      { keywords: ["鬼", "灵异", "超自然"], answer: "否", note: "没有超自然设定" }
+    ],
+    points: [
+      { core: true,  desc: "他其实已经失业了，而且一直瞒着家里" },
+      { core: true,  desc: "他手头没钱，回家给不出红包和礼物的钱" },
+      { core: true,  desc: "他退票是不敢回家，而不是不想回家" },
+      { core: false, desc: "一旦回家，失业这件事就会露馅" },
+      { core: false, desc: "他在电话里撒谎，是不想让妈妈担心" }
+    ],
+    truthKeywords: ["失业", "裁员", "没钱", "红包", "礼物", "不敢", "瞒", "露馅", "撒谎"]
+  },
+
+  "soup-04": {
+    id: "soup-04",
+    title: "五楼的灯",
+    difficulty: "★★★",
+    surface: "他每天半夜回家，都会抬头看一眼五楼那扇窗。窗帘后头总立着一个人影，一动不动。某天他听说，五楼那户人家三天前就出事了。可那晚他抬头，人影还在。",
+    truth: "五楼住的是个独居老人，三天前在家里去世了。窗帘后面那个人影，其实是窗外一棵树的枝桠被路灯照着投在窗帘上的影子，风一吹就轻轻晃，远看像一个人直挺挺站在那儿。他每天看到的，从来就不是人。",
+    qa: [
+      { keywords: ["死", "去世", "死了", "身亡", "活着"], answer: "否", note: "那个人已经去世了" },
+      { keywords: ["人", "有人", "站着", "那个人"], answer: "否", note: "窗帘后没有人" },
+      { keywords: ["影子", "投影", "倒影", "反射"], answer: "是", note: "那只是影子" },
+      { keywords: ["树", "树枝", "枝桠", "叶子"], answer: "是", note: "和窗外的树有关" },
+      { keywords: ["灯", "路灯", "光", "照射"], answer: "是", note: "关键是有光" },
+      { keywords: ["窗帘", "窗", "窗户"], answer: "是", note: "视线被窗帘挡住了" },
+      { keywords: ["独居", "一个人住", "老人", "孤单"], answer: "是", note: "那户人家确实独居" },
+      { keywords: ["报警", "警察", "撬门", "发现"], answer: "是", note: "最后是警察发现的" },
+      { keywords: ["风", "吹", "动", "晃"], answer: "是", note: "影子会随风轻轻晃动" },
+      { keywords: ["害怕", "恐怖", "吓", "毛骨悚然"], answer: "是", note: "他确实觉得害怕" },
+      { keywords: ["鬼", "灵异", "超自然", "闹鬼", "魂"], answer: "否", note: "没有超自然设定" },
+      { keywords: ["为什么", "原因", "看不清", "误会"], answer: "无法判断", note: "需要你自己推理" }
+    ],
+    points: [
+      { core: true,  desc: "五楼住的那个人三天前已经去世了" },
+      { core: true,  desc: "他看到的「人影」其实是树枝在灯光下的投影" },
+      { core: true,  desc: "窗帘后面并没有人站着" },
+      { core: false, desc: "他一直以为那儿站着一个人，所以才总在意" },
+      { core: false, desc: "光源来自窗外的路灯" }
+    ],
+    truthKeywords: ["去世", "树枝", "影子", "投影", "路灯", "窗帘", "没人"]
   }
 };
 
-/* 当前正在玩的汤 */
-let currentSoupId = "soup-05";
+/* 题库展示顺序（只渲染 SOUPS 里真实存在的 id） */
+const SOUP_ORDER = ["soup-01", "soup-02", "soup-03", "soup-04", "soup-05"];
+
+/* 当前正在玩的汤：默认从最简单的第一题开始 */
+let currentSoupId = "soup-01";
 
 /* getSoup：返回当前汤的数据对象 */
 function getSoup() {
@@ -820,8 +934,11 @@ function getSoup() {
 
 /* 各汤的提问框示例文案 */
 const ASK_PLACEHOLDERS = {
-  "soup-05": "问一个可以用「是 / 否」回答的问题，例如：她是死者的亲人吗？",
-  "soup-02": "问一个可以用「是 / 否」回答的问题，例如：她在影院里吗？"
+  "soup-01": "问一个可以用「是 / 否」回答的问题，例如：那把伞是他的吗？",
+  "soup-02": "问一个可以用「是 / 否」回答的问题，例如：她在影院里吗？",
+  "soup-03": "问一个可以用「是 / 否」回答的问题，例如：他是因为钱才不回家的吗？",
+  "soup-04": "问一个可以用「是 / 否」回答的问题，例如：他认识五楼的人吗？",
+  "soup-05": "问一个可以用「是 / 否」回答的问题，例如：她是死者的亲人吗？"
 };
 
 /* =========================================================
@@ -848,6 +965,7 @@ const reviewList  = document.getElementById("reviewList");  /* 复盘逐条列�
 const reviewTip   = document.getElementById("reviewTip");   /* 复盘离线说明 */
 const soupBank    = document.getElementById("soupBank");    /* 题库卡片容器 */
 const bankStat    = document.getElementById("bankStat");    /* 「已解出 x / 共 N 题」 */
+const clearProgressBtn = document.getElementById("clearProgressBtn"); /* 「清除进度」按钮 */
 
 /* AI 主持模式相关元素 */
 const modeStatus      = document.getElementById("modeStatus");      /* 顶部模式状态 */
@@ -1834,7 +1952,7 @@ function statusClass(status) {
 /* renderBank：渲染题库卡片，并刷新「已解出 x / 共 N 题」统计 */
 function renderBank() {
   const progress = readProgress();
-  const ids = Object.keys(SOUPS);
+  const ids = SOUP_ORDER.filter(function (id) { return !!SOUPS[id]; });
   let solved = 0;
 
   soupBank.textContent = "";
@@ -1924,6 +2042,14 @@ function switchSoup(id) {
 soupBank.addEventListener("click", function (event) {
   const card = event.target.closest(".soup-card");
   if (card && card.dataset.id) switchSoup(card.dataset.id);
+});
+
+/* 清除进度：确认后只删除存档，不影响当前这一局 */
+clearProgressBtn.addEventListener("click", function () {
+  if (!confirm("确定要清除全部题库进度吗？")) return;
+
+  removeStore(LS_PROGRESS);
+  renderBank();
 });
 
 /* =========================================================
